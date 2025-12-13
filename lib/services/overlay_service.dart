@@ -1,5 +1,5 @@
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
 
 class OverlayService {
   // 初始化悬浮窗
@@ -14,8 +14,8 @@ class OverlayService {
 
   // 请求悬浮窗权限
   static Future<bool> requestOverlayPermission() async {
-    final status = await Permission.systemAlertWindow.request();
-    return status == PermissionStatus.granted;
+    final status = await ph.Permission.systemAlertWindow.request();
+    return status == ph.PermissionStatus.granted;
   }
 
   // 显示悬浮窗
