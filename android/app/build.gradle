@@ -41,7 +41,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.scan_assistant"
-        minSdk 21
+        minSdk 26
         targetSdk 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
