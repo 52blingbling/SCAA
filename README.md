@@ -48,6 +48,21 @@ lib/
     └── permission_handler.dart # 权限处理工具
 ```
 
+## 自动编译APK (GitHub Actions)
+
+本项目已配置GitHub Actions工作流，可以自动编译APK文件。
+
+### 工作流说明
+- 当您向`main`或`master`分支推送代码时，会自动触发编译
+- 工作流会使用Ubuntu环境进行构建
+- 编译完成后，APK文件会作为artifact可供下载
+
+### 如何下载编译好的APK
+1. 在GitHub仓库页面，点击"Actions"选项卡
+2. 选择最近的workflow运行记录
+3. 在"Artifacts"部分下载"release-apk"
+4. 解压下载的文件即可获得APK
+
 ## 无需本地环境的在线编译平台推荐
 
 ### 1. Codemagic
