@@ -1,3 +1,4 @@
+import 'scan_record.dart';
 class Unit {
   final String id;
   final String name;

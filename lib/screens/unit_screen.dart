@@ -173,18 +173,37 @@ class _UnitScreenState extends State<UnitScreen> {
             ),
             // 快捷助手悬浮窗
             if (_showFloatingHelper)
-              FloatingHelper(
-                unit: unit,
-                currentIndex: _currentRecordIndex,
-                onIndexChanged: (index) {
-                  setState(() {
-                    _currentRecordIndex = index;
-                  });
-                },
-                onClose: () {
-                  setState(() {
-                    _showFloatingHelper = false;
-                  });
+              Builder(
+                builder: (context) {
+                  String currentContent = '';
+                  for (final r in unit.scanRecords) {
+                    if (r.index == _currentRecordIndex) {
+                      currentContent = r.content;
+                      break;
+                    }
+                  }
+                  return FloatingHelper(
+                    onClose: () {
+                      setState(() {
+                        _showFloatingHelper = false;
+                      });
+                    },
+                    onPrevious: () {
+                      setState(() {
+                        if (_currentRecordIndex > 1) {
+                          _currentRecordIndex -= 1;
+                        }
+                      });
+                    },
+                    onNext: () {
+                      setState(() {
+                        if (_currentRecordIndex < unit.scanRecords.length) {
+                          _currentRecordIndex += 1;
+                        }
+                      });
+                    },
+                    currentContent: currentContent,
+                  );
                 },
               ),
           ],

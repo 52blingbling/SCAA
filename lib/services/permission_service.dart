@@ -1,11 +1,11 @@
-import 'package:permission_handler/permission_handler.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:flutter/material.dart';
 
 class PermissionService {
   // 请求相机权限
   static Future<bool> requestCameraPermission(BuildContext context) async {
-    final status = await Permission.camera.request();
-    if (status != PermissionStatus.granted) {
+    final status = await ph.Permission.camera.request();
+    if (status != ph.PermissionStatus.granted) {
       if (context.mounted) {
         _showPermissionDeniedDialog(
           context,
@@ -20,14 +20,14 @@ class PermissionService {
 
   // 检查相机权限
   static Future<bool> checkCameraPermission() async {
-    final status = await Permission.camera.status;
-    return status == PermissionStatus.granted;
+    final status = await ph.Permission.camera.status;
+    return status == ph.PermissionStatus.granted;
   }
 
   // 请求存储权限
   static Future<bool> requestStoragePermission(BuildContext context) async {
-    final status = await Permission.storage.request();
-    if (status != PermissionStatus.granted) {
+    final status = await ph.Permission.storage.request();
+    if (status != ph.PermissionStatus.granted) {
       if (context.mounted) {
         _showPermissionDeniedDialog(
           context,
@@ -42,14 +42,14 @@ class PermissionService {
 
   // 检查存储权限
   static Future<bool> checkStoragePermission() async {
-    final status = await Permission.storage.status;
-    return status == PermissionStatus.granted;
+    final status = await ph.Permission.storage.status;
+    return status == ph.PermissionStatus.granted;
   }
 
   // 请求悬浮窗权限（Android）
   static Future<bool> requestOverlayPermission(BuildContext context) async {
-    final status = await Permission.systemAlertWindow.request();
-    if (status != PermissionStatus.granted) {
+    final status = await ph.Permission.systemAlertWindow.request();
+    if (status != ph.PermissionStatus.granted) {
       if (context.mounted) {
         _showPermissionDeniedDialog(
           context,
@@ -64,13 +64,13 @@ class PermissionService {
 
   // 检查悬浮窗权限
   static Future<bool> checkOverlayPermission() async {
-    final status = await Permission.systemAlertWindow.status;
-    return status == PermissionStatus.granted;
+    final status = await ph.Permission.systemAlertWindow.status;
+    return status == ph.PermissionStatus.granted;
   }
 
   // 打开应用设置页面
   static Future<void> openAppSettings() async {
-    await openAppSettings();
+    await ph.openAppSettings();
   }
 
   // 显示权限被拒绝对话框

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/unit.dart';
+import '../models/scan_record.dart';
 
 class UnitService extends ChangeNotifier {
   List<Unit> _units = [];

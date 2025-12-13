@@ -3,12 +3,14 @@ import 'package:flutter/services.dart';
 import '../services/audio_service.dart';
 
 class FloatingHelper extends StatefulWidget {
+  final VoidCallback onClose;
   final VoidCallback onNext;
   final VoidCallback onPrevious;
   final String currentContent;
 
   const FloatingHelper({
     Key? key,
+    required this.onClose,
     required this.onNext,
     required this.onPrevious,
     required this.currentContent,
@@ -47,7 +49,7 @@ class _FloatingHelperState extends State<FloatingHelper> {
         },
         child: Container(
           width: 120,
-          height: 180,
+          height: 210,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -62,6 +64,10 @@ class _FloatingHelperState extends State<FloatingHelper> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.black87),
+                onPressed: widget.onClose,
+              ),
               // 上一个按钮
               IconButton(
                 icon: const Icon(Icons.arrow_upward, color: Colors.blue),
