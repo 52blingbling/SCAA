@@ -5,18 +5,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 class OverlayService {
   // 初始化悬浮窗
   static Future<void> initializeOverlay() async {
-    await FlutterOverlayWindow.initialize();
+    // v0.5.0 无需初始化
   }
 
   // 检查悬浮窗权限
   static Future<bool> checkOverlayPermission() async {
-    return await FlutterOverlayWindow.isPermissionGranted();
+    return (await FlutterOverlayWindow.isPermissionGranted()) == true;
   }
 
   // 请求悬浮窗权限
   static Future<bool> requestOverlayPermission() async {
     final granted = await FlutterOverlayWindow.requestPermission();
-    if (granted) return true;
+    if (granted == true) return true;
     final status = await ph.Permission.systemAlertWindow.request();
     return status == ph.PermissionStatus.granted;
   }
@@ -33,14 +33,16 @@ class OverlayService {
         positionGravity: PositionGravity.auto,
         overlayTitle: '快捷助手已开启',
         overlayContent: '跨应用悬浮窗',
-        startPosition: (x != null && y != null) ? OverlayPosition(x, y) : null,
+        startPosition: (x != null && y != null)
+            ? OverlayPosition(x.toDouble(), y.toDouble())
+            : null,
       );
     }
   }
 
   // 隐藏悬浮窗
   static Future<void> hideOverlay() async {
-    await FlutterOverlayWindow.hideOverlay();
+    await FlutterOverlayWindow.closeOverlay();
   }
 
   // 检查悬浮窗是否可见
@@ -58,8 +60,11 @@ class OverlayService {
     final pos = await FlutterOverlayWindow.getOverlayPosition();
     if (pos != null) {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('overlay_x', pos.dx.toInt());
-      await prefs.setInt('overlay_y', pos.dy.toInt());
+      final dynamic d = pos;
+      final double ox = (d.x is double) ? d.x : (d.dx is double ? d.dx : 0.0);
+      final double oy = (d.y is double) ? d.y : (d.dy is double ? d.dy : 0.0);
+      await prefs.setInt('overlay_x', ox.toInt());
+      await prefs.setInt('overlay_y', oy.toInt());
     }
   }
 }
