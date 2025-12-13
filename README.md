@@ -56,6 +56,7 @@ lib/
 - 当您向`main`或`master`分支推送代码时，会自动触发编译
 - 工作流会使用Ubuntu环境进行构建
 - 编译完成后，APK文件会作为artifact可供下载
+- 使用最新的`actions/upload-artifact@v4`版本，避免兼容性问题
 
 ### 如何下载编译好的APK
 1. 在GitHub仓库页面，点击"Actions"选项卡
