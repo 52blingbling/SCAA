@@ -5,6 +5,7 @@ import '../services/unit_service.dart';
 import '../services/permission_service.dart';
 import '../services/audio_service.dart';
 import 'dart:io' show Platform;
+import 'package:flutter/services.dart';
 
 class ScannerScreen extends StatefulWidget {
   final String unitId;
@@ -19,6 +20,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
   MobileScannerController? _controller;
   String? _resultCode;
   bool _permissionGranted = false;
+  bool _scanSuccess = false;
 
   @override
   void initState() {
@@ -44,7 +46,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
     
     if (granted && mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _controller ??= MobileScannerController();
+        _controller ??= MobileScannerController(
+          detectionSpeed: DetectionSpeed.normal,
+          detectionTimeoutMs: 300,
+        );
         _controller!.start();
       });
     }
@@ -65,9 +70,40 @@ class _ScannerScreenState extends State<ScannerScreen> {
               children: [
                 Expanded(
                   flex: 4,
-                  child: MobileScanner(
-                    controller: _controller ??= MobileScannerController(),
-                    onDetect: _onDetect,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      MobileScanner(
+                        controller: _controller ??= MobileScannerController(
+                          detectionSpeed: DetectionSpeed.normal,
+                          detectionTimeoutMs: 300,
+                        ),
+                        onDetect: _onDetect,
+                      ),
+                      Container(
+                        color: Colors.black.withOpacity(0.2),
+                      ),
+                      Center(
+                        child: Container(
+                          width: 260,
+                          height: 260,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: _scanSuccess ? Colors.greenAccent : Colors.white,
+                              width: 3,
+                            ),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              '对准二维码',
+                              style: TextStyle(color: Colors.white70),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Expanded(
@@ -110,12 +146,15 @@ class _ScannerScreenState extends State<ScannerScreen> {
     if (code == null || code.isEmpty) return;
     setState(() {
       _resultCode = code;
+      _scanSuccess = true;
     });
     AudioService.playScanSound();
+    HapticFeedback.lightImpact();
     await Future.delayed(const Duration(milliseconds: 300));
     if (mounted) {
       Provider.of<UnitService>(context, listen: false)
           .addScanRecord(widget.unitId, code);
+      setState(() => _scanSuccess = false);
       Navigator.pop(context);
     }
   }

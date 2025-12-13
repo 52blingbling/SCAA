@@ -5,6 +5,9 @@ import '../services/permission_service.dart';
 import '../models/unit.dart';
 import 'scanner_screen.dart';
 import '../widgets/floating_helper.dart';
+import 'package:flutter_overlay_window/flutter_overlay_window.dart';
+import '../services/overlay_service.dart';
+import 'dart:async';
 
 class UnitScreen extends StatefulWidget {
   final String unitId;
@@ -19,11 +22,46 @@ class _UnitScreenState extends State<UnitScreen> {
   bool _showFloatingHelper = false;
   int _currentRecordIndex = 1;
   bool _overlayPermissionGranted = false;
+  StreamSubscription? _overlaySub;
 
   @override
   void initState() {
     super.initState();
     _checkOverlayPermission();
+    _overlaySub = FlutterOverlayWindow.overlayListener.listen((event) {
+      final unitService = Provider.of<UnitService>(context, listen: false);
+      final unit = unitService.getUnitById(widget.unitId);
+      if (unit == null) return;
+      if (event is Map) {
+        final m = Map<String, dynamic>.from(event);
+        final action = m['action'];
+        if (action == 'prev') {
+          setState(() {
+            if (_currentRecordIndex > 1) _currentRecordIndex -= 1;
+          });
+        } else if (action == 'next') {
+          setState(() {
+            if (_currentRecordIndex < unit.scanRecords.length) {
+              _currentRecordIndex += 1;
+            }
+          });
+        } else if (action == 'save_position') {
+          OverlayService.savePosition();
+        }
+        String currentContent = '';
+        for (final r in unit.scanRecords) {
+          if (r.index == _currentRecordIndex) {
+            currentContent = r.content;
+            break;
+          }
+        }
+        OverlayService.sendData({
+          'unit_name': unit.name,
+          'sequence': _currentRecordIndex,
+          'content': currentContent,
+        });
+      }
+    });
   }
 
   Future<void> _checkOverlayPermission() async {
@@ -147,13 +185,28 @@ class _UnitScreenState extends State<UnitScreen> {
                             ? () {
                                 setState(() {
                                   _showFloatingHelper = !_showFloatingHelper;
-                                  if (_showFloatingHelper) {
-                                    // 设置当前记录索引为第一条记录或1
-                                    _currentRecordIndex = unit.scanRecords.isNotEmpty 
-                                      ? unit.scanRecords.first.index 
-                                      : 1;
-                                  }
                                 });
+                                if (_showFloatingHelper) {
+                                  _currentRecordIndex = unit.scanRecords.isNotEmpty
+                                      ? unit.scanRecords.first.index
+                                      : 1;
+                                  OverlayService.showOverlay().then((_) {
+                                    String currentContent = '';
+                                    for (final r in unit.scanRecords) {
+                                      if (r.index == _currentRecordIndex) {
+                                        currentContent = r.content;
+                                        break;
+                                      }
+                                    }
+                                    OverlayService.sendData({
+                                      'unit_name': unit.name,
+                                      'sequence': _currentRecordIndex,
+                                      'content': currentContent,
+                                    });
+                                  });
+                                } else {
+                                  OverlayService.hideOverlay();
+                                }
                               }
                             : _requestOverlayPermission,
                         icon: const Icon(Icons.extension),
@@ -215,5 +268,11 @@ class _UnitScreenState extends State<UnitScreen> {
   String _formatDateTime(DateTime dateTime) {
     return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} '
         '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  void dispose() {
+    _overlaySub?.cancel();
+    super.dispose();
   }
 }
