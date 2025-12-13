@@ -224,41 +224,7 @@ class _UnitScreenState extends State<UnitScreen> {
                 ),
               ),
             ),
-            // 快捷助手悬浮窗
-            if (_showFloatingHelper)
-              Builder(
-                builder: (context) {
-                  String currentContent = '';
-                  for (final r in unit.scanRecords) {
-                    if (r.index == _currentRecordIndex) {
-                      currentContent = r.content;
-                      break;
-                    }
-                  }
-                  return FloatingHelper(
-                    onClose: () {
-                      setState(() {
-                        _showFloatingHelper = false;
-                      });
-                    },
-                    onPrevious: () {
-                      setState(() {
-                        if (_currentRecordIndex > 1) {
-                          _currentRecordIndex -= 1;
-                        }
-                      });
-                    },
-                    onNext: () {
-                      setState(() {
-                        if (_currentRecordIndex < unit.scanRecords.length) {
-                          _currentRecordIndex += 1;
-                        }
-                      });
-                    },
-                    currentContent: currentContent,
-                  );
-                },
-              ),
+            // 系统级悬浮窗由 OverlayService 管理，此处不再显示内嵌悬浮窗
           ],
         );
       },
