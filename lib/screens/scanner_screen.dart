@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import '../services/unit_service.dart';
 import '../services/permission_service.dart';
@@ -16,9 +16,8 @@ class ScannerScreen extends StatefulWidget {
 }
 
 class _ScannerScreenState extends State<ScannerScreen> {
-  final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
-  Barcode? result;
-  QRViewController? controller;
+  MobileScannerController? _controller;
+  String? _resultCode;
   bool _permissionGranted = false;
 
   @override
@@ -31,9 +30,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
   void reassemble() {
     super.reassemble();
     if (Platform.isAndroid) {
-      controller?.pauseCamera();
+      _controller?.stop();
     } else if (Platform.isIOS) {
-      controller?.resumeCamera();
+      _controller?.start();
     }
   }
 
@@ -44,11 +43,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
     });
     
     if (granted && mounted) {
-      // 权限获取成功后初始化相机
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (controller != null) {
-          controller!.resumeCamera();
-        }
+        _controller ??= MobileScannerController();
+        _controller!.start();
       });
     }
   }
@@ -68,23 +65,16 @@ class _ScannerScreenState extends State<ScannerScreen> {
               children: [
                 Expanded(
                   flex: 4,
-                  child: QRView(
-                    key: qrKey,
-                    onQRViewCreated: _onQRViewCreated,
-                    overlay: QrScannerOverlayShape(
-                      borderColor: Colors.red,
-                      borderRadius: 10,
-                      borderLength: 30,
-                      borderWidth: 10,
-                      cutOutSize: 300,
-                    ),
+                  child: MobileScanner(
+                    controller: _controller ??= MobileScannerController(),
+                    onDetect: _onDetect,
                   ),
                 ),
                 Expanded(
                   flex: 1,
                   child: Center(
-                    child: (result != null)
-                        ? Text('扫描结果: ${result!.code}')
+                    child: (_resultCode != null)
+                        ? Text('扫描结果: ${_resultCode!}')
                         : const Text('请将二维码对准扫描框'),
                   ),
                 ),
@@ -111,40 +101,28 @@ class _ScannerScreenState extends State<ScannerScreen> {
     );
   }
 
-  void _onQRViewCreated(QRViewController controller) {
+  void _onDetect(BarcodeCapture capture) async {
     if (!_permissionGranted) return;
-    
+    final barcodes = capture.barcodes;
+    if (barcodes.isEmpty) return;
+    final first = barcodes.first;
+    final code = first.rawValue ?? first.displayValue;
+    if (code == null || code.isEmpty) return;
     setState(() {
-      this.controller = controller;
+      _resultCode = code;
     });
-    
-    controller.scannedDataStream.listen((scanData) async {
-      setState(() {
-        result = scanData;
-      });
-      
-      // 保存扫描结果到单元中
-      if (result != null) {
-        // 播放扫描成功音效
-        AudioService.playScanSound();
-        
-        // 稍微延迟一下再保存，让用户看到扫描结果
-        await Future.delayed(const Duration(milliseconds: 500));
-        
-        if (mounted) {
-          Provider.of<UnitService>(context, listen: false)
-              .addScanRecord(widget.unitId, result!.code!);
-          
-          // 返回上一页面
-          Navigator.pop(context);
-        }
-      }
-    });
+    AudioService.playScanSound();
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (mounted) {
+      Provider.of<UnitService>(context, listen: false)
+          .addScanRecord(widget.unitId, code);
+      Navigator.pop(context);
+    }
   }
 
   @override
   void dispose() {
-    controller?.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 }
