@@ -295,7 +295,7 @@ class _OverlayWindowState extends State<OverlayWindow> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildIconButton({required IconData icon, required VoidCallback onTap}) {
