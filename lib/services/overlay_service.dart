@@ -36,6 +36,7 @@ class OverlayService {
         startPosition: (x != null && y != null)
             ? OverlayPosition(x.toDouble(), y.toDouble())
             : null,
+        alignment: (x == null || y == null) ? OverlayAlignment.center : null,
       );
     }
   }

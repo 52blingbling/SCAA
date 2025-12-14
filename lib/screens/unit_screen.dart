@@ -24,6 +24,7 @@ class _UnitScreenState extends State<UnitScreen> {
   bool _overlayPermissionGranted = false;
   StreamSubscription? _overlaySub;
   int _currentPos = 0;
+  Timer? _overlayActiveTimer;
 
   @override
   void initState() {
@@ -199,8 +200,19 @@ class _UnitScreenState extends State<UnitScreen> {
                                       'content': currentContent,
                                     });
                                   });
+                                  _overlayActiveTimer?.cancel();
+                                  _overlayActiveTimer = Timer.periodic(const Duration(milliseconds: 800), (t) async {
+                                    final active = await OverlayService.isOverlayVisible();
+                                    if (!active && mounted) {
+                                      setState(() {
+                                        _showFloatingHelper = false;
+                                      });
+                                      t.cancel();
+                                    }
+                                  });
                                 } else {
                                   OverlayService.hideOverlay();
+                                  _overlayActiveTimer?.cancel();
                                 }
                               }
                             : _requestOverlayPermission,
@@ -234,6 +246,7 @@ class _UnitScreenState extends State<UnitScreen> {
   @override
   void dispose() {
     _overlaySub?.cancel();
+    _overlayActiveTimer?.cancel();
     super.dispose();
   }
 }
