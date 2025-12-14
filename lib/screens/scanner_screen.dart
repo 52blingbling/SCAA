@@ -159,7 +159,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
       setState(() {
         _invalidFeedback = true;
       });
-      AudioService.playScanSound();
+      // AudioService.playScanSound(); // Removed sound for invalid codes
       HapticFeedback.mediumImpact();
       await Future.delayed(const Duration(milliseconds: 500));
       if (mounted) {
