@@ -6,7 +6,10 @@ import '../models/scan_record.dart';
 
 class UnitService extends ChangeNotifier {
   List<Unit> _units = [];
+  bool _isLoading = true;
+
   List<Unit> get units => _units;
+  bool get isLoading => _isLoading;
 
   UnitService() {
     loadUnits();
@@ -14,6 +17,11 @@ class UnitService extends ChangeNotifier {
 
   // 加载所有单元
   Future<void> loadUnits() async {
+    _isLoading = true;
+    // notifyListeners(); // Avoid notifying during constructor if possible, but loadUnits is async so it's fine.
+    // However, calling notifyListeners in constructor (indirectly) can be risky if widget is building.
+    // Since loadUnits is async, it will run on next event loop tick, which is safe.
+    
     final prefs = await SharedPreferences.getInstance();
     try {
       final unitsJson = prefs.getString('units') ?? '[]';
@@ -22,8 +30,10 @@ class UnitService extends ChangeNotifier {
     } catch (_) {
       _units = [];
       await prefs.remove('units');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   // 保存所有单元

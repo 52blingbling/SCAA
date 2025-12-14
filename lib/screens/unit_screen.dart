@@ -4,7 +4,6 @@ import '../services/unit_service.dart';
 import '../services/permission_service.dart';
 import '../models/unit.dart';
 import 'scanner_screen.dart';
-import '../widgets/floating_helper.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import '../services/overlay_service.dart';
 import 'dart:async';
@@ -82,6 +81,12 @@ class _UnitScreenState extends State<UnitScreen> {
   Widget build(BuildContext context) {
     return Consumer<UnitService>(
       builder: (context, unitService, child) {
+        if (unitService.isLoading) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
         final unit = unitService.getUnitById(widget.unitId);
         if (unit == null) {
           return const Scaffold(

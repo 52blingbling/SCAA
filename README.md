@@ -39,13 +39,13 @@ lib/
 │   ├── unit_screen.dart     # 单元详情界面
 │   └── scanner_screen.dart  # 扫码界面
 ├── widgets/
-│   └── floating_helper.dart # 快捷助手悬浮窗组件
+│   └── overlay_window.dart  # 快捷助手悬浮窗组件
 ├── services/
 │   ├── unit_service.dart    # 单元管理服务
 │   ├── audio_service.dart   # 音效服务
-│   └── scanner_service.dart # 扫码服务（可选）
+│   ├── overlay_service.dart # 悬浮窗服务
+│   └── permission_service.dart # 权限服务
 └── utils/
-    └── permission_handler.dart # 权限处理工具
 ```
 
 ## 自动编译APK (GitHub Actions)
