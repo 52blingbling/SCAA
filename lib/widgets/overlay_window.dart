@@ -19,9 +19,16 @@ class _OverlayWindowState extends State<OverlayWindow> {
   int currentPos = 0;
   bool _isCopied = false;
 
+  final GlobalKey _containerKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
+    // 监听窗口调整
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateOverlaySize();
+    });
+
     FlutterOverlayWindow.overlayListener.listen((event) async {
       if (event is Map) {
         final m = Map<String, dynamic>.from(event);
@@ -69,6 +76,10 @@ class _OverlayWindowState extends State<OverlayWindow> {
                // sequence 保持不变或设为 1
             }
           }
+          // 内容更新后，重新调整窗口大小
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+             _updateOverlaySize();
+          });
         });
         if (m['feedback'] == 'success') {
           setState(() => borderColor = Colors.greenAccent);
@@ -88,12 +99,33 @@ class _OverlayWindowState extends State<OverlayWindow> {
     });
   }
 
+  Future<void> _updateOverlaySize() async {
+    if (!mounted) return;
+    try {
+      final RenderBox? renderBox = _containerKey.currentContext?.findRenderObject() as RenderBox?;
+      if (renderBox != null) {
+        final size = renderBox.size;
+        // 获取设备像素密度
+        final dpr = View.of(context).devicePixelRatio;
+        // 计算物理像素尺寸，适当增加一点 buffer 防止截断
+        final int w = (size.width * dpr).toInt() + 2; 
+        final int h = (size.height * dpr).toInt() + 2;
+        await FlutterOverlayWindow.resizeOverlay(w, h, true);
+      }
+    } catch (e) {
+      debugPrint('Error resizing overlay: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      child: Container(
-        decoration: BoxDecoration(
+      child: Center(
+        child: Container(
+          key: _containerKey,
+          width: 340, // 固定宽度
+          decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(

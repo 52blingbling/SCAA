@@ -35,8 +35,6 @@ class OverlayService {
           overlayTitle: '快捷助手已开启',
           overlayContent: '跨应用悬浮窗',
           startPosition: OverlayPosition(x.toDouble(), y.toDouble()),
-          width: 340,
-          height: 280,
         );
       } else {
         await FlutterOverlayWindow.showOverlay(
@@ -46,8 +44,6 @@ class OverlayService {
           overlayTitle: '快捷助手已开启',
           overlayContent: '跨应用悬浮窗',
           alignment: OverlayAlignment.center,
-          width: 340,
-          height: 280,
         );
       }
     }
