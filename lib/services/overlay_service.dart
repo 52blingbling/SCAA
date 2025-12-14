@@ -31,7 +31,7 @@ class OverlayService {
         await FlutterOverlayWindow.showOverlay(
           enableDrag: true,
           flag: OverlayFlag.defaultFlag,
-          positionGravity: PositionGravity.auto,
+          positionGravity: PositionGravity.none,
           overlayTitle: '快捷助手已开启',
           overlayContent: '跨应用悬浮窗',
           startPosition: OverlayPosition(x.toDouble(), y.toDouble()),
@@ -40,7 +40,7 @@ class OverlayService {
         await FlutterOverlayWindow.showOverlay(
           enableDrag: true,
           flag: OverlayFlag.defaultFlag,
-          positionGravity: PositionGravity.auto,
+          positionGravity: PositionGravity.none,
           overlayTitle: '快捷助手已开启',
           overlayContent: '跨应用悬浮窗',
           alignment: OverlayAlignment.center,

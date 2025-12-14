@@ -15,9 +15,14 @@ class UnitService extends ChangeNotifier {
   // 加载所有单元
   Future<void> loadUnits() async {
     final prefs = await SharedPreferences.getInstance();
-    final unitsJson = prefs.getString('units') ?? '[]';
-    final List<dynamic> unitsData = json.decode(unitsJson);
-    _units = unitsData.map((data) => Unit.fromMap(data)).toList();
+    try {
+      final unitsJson = prefs.getString('units') ?? '[]';
+      final List<dynamic> unitsData = json.decode(unitsJson);
+      _units = unitsData.map((data) => Unit.fromMap(data)).toList();
+    } catch (_) {
+      _units = [];
+      await prefs.remove('units');
+    }
     notifyListeners();
   }
 

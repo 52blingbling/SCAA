@@ -52,6 +52,8 @@ class _GlobalOverlayState extends State<_GlobalOverlay> {
   String content = '';
   int sequence = 1;
   Color borderColor = Colors.white;
+  List<Map<String, dynamic>> records = [];
+  int currentPos = 0;
 
   @override
   void initState() {
@@ -63,6 +65,14 @@ class _GlobalOverlayState extends State<_GlobalOverlay> {
           unitLabel = '${m['unit_name'] ?? ''}-${m['sequence'] ?? 1}';
           content = m['content'] ?? '';
           sequence = m['sequence'] ?? 1;
+          if (m['records'] is List) {
+            records = List<Map<String, dynamic>>.from(m['records']);
+            currentPos = 0;
+            if (records.isNotEmpty) {
+              content = records[0]['content'] ?? '';
+              sequence = records[0]['index'] ?? 1;
+            }
+          }
         });
         if (m['feedback'] == 'success') {
           setState(() => borderColor = Colors.greenAccent);
@@ -87,7 +97,7 @@ class _GlobalOverlayState extends State<_GlobalOverlay> {
     return Material(
       color: Colors.transparent,
       child: Align(
-        alignment: Alignment.topLeft,
+        alignment: Alignment.center,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 360),
           child: Container(
@@ -129,6 +139,13 @@ class _GlobalOverlayState extends State<_GlobalOverlay> {
                               height: 50,
                               child: ElevatedButton(
                                 onPressed: () {
+                                  if (records.isNotEmpty && currentPos > 0) {
+                                    setState(() {
+                                      currentPos -= 1;
+                                      content = records[currentPos]['content'] ?? '';
+                                      sequence = records[currentPos]['index'] ?? sequence - 1;
+                                    });
+                                  }
                                   FlutterOverlayWindow.shareData({'action': 'prev'});
                                 },
                                 style: ElevatedButton.styleFrom(
@@ -166,6 +183,13 @@ class _GlobalOverlayState extends State<_GlobalOverlay> {
                               height: 50,
                               child: ElevatedButton(
                                 onPressed: () {
+                                  if (records.isNotEmpty && currentPos < records.length - 1) {
+                                    setState(() {
+                                      currentPos += 1;
+                                      content = records[currentPos]['content'] ?? '';
+                                      sequence = records[currentPos]['index'] ?? sequence + 1;
+                                    });
+                                  }
                                   FlutterOverlayWindow.shareData({'action': 'next'});
                                 },
                                 style: ElevatedButton.styleFrom(

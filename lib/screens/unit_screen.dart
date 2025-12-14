@@ -198,6 +198,12 @@ class _UnitScreenState extends State<UnitScreen> {
                                       'unit_name': unit.name,
                                       'sequence': unit.scanRecords[_currentPos].index,
                                       'content': currentContent,
+                                      'records': unit.scanRecords
+                                          .map((r) => {
+                                                'index': r.index,
+                                                'content': r.content,
+                                              })
+                                          .toList(),
                                     });
                                   });
                                   _overlayActiveTimer?.cancel();
