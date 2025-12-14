@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
@@ -24,15 +25,47 @@ class _OverlayWindowState extends State<OverlayWindow> {
       if (event is Map) {
         final m = Map<String, dynamic>.from(event);
         setState(() {
-          unitLabel = '${m['unit_name'] ?? ''}-${m['sequence'] ?? 1}';
-          content = m['content'] ?? '';
-          sequence = m['sequence'] ?? 1;
+          // 只更新非空字段，防止覆盖已有数据
+          if (m.containsKey('unit_name')) {
+            unitLabel = '${m['unit_name']}-${m['sequence'] ?? 1}';
+          }
+          // 只有在明确传入 content 时才更新，或者 records 为空时
+          if (m.containsKey('content')) {
+            content = m['content'];
+          }
+          if (m.containsKey('sequence')) {
+            sequence = m['sequence'];
+          }
+          
           if (m['records'] is List) {
             records = List<Map<String, dynamic>>.from(m['records']);
-            currentPos = 0;
-            if (records.isNotEmpty) {
-              content = records[0]['content'] ?? '';
-              sequence = records[0]['index'] ?? 1;
+            // 如果传入了 sequence，尝试定位到对应 index
+            if (m.containsKey('sequence')) {
+               final seq = m['sequence'];
+               final idx = records.indexWhere((r) => r['index'] == seq);
+               if (idx != -1) {
+                 currentPos = idx;
+               } else {
+                 currentPos = 0;
+               }
+            } else {
+               currentPos = 0;
+            }
+            
+            // 刷新当前显示内容
+            if (records.isNotEmpty && currentPos < records.length) {
+              content = records[currentPos]['content'] ?? '';
+              sequence = records[currentPos]['index'] ?? 1;
+              // 更新标题中的序号
+              if (unitLabel.contains('-')) {
+                 final parts = unitLabel.split('-');
+                 if (parts.isNotEmpty) {
+                    unitLabel = '${parts[0]}-$sequence';
+                 }
+              }
+            } else {
+               content = '暂无内容';
+               // sequence 保持不变或设为 1
             }
           }
         });
@@ -61,157 +94,204 @@ class _OverlayWindowState extends State<OverlayWindow> {
       child: Align(
         alignment: Alignment.center,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 360),
+          constraints: const BoxConstraints(maxWidth: 340),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
-              border: Border.all(color: borderColor, width: 2),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  spreadRadius: 5,
+                )
+              ],
             ),
-            padding: const EdgeInsets.all(12),
-            child: DefaultTextStyle(
-              style: const TextStyle(color: Colors.white),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          unitLabel.isEmpty ? '未选择' : unitLabel,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          content.isEmpty ? '暂无内容' : content,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: borderColor.withOpacity(0.3), width: 1),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                child: DefaultTextStyle(
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontFamily: '.SF Pro Text',
+                    letterSpacing: -0.5,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(
-                              width: 50,
-                              height: 50,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  if (records.isNotEmpty && currentPos > 0) {
-                                    setState(() {
-                                      currentPos -= 1;
-                                      content = records[currentPos]['content'] ?? '';
-                                      sequence = records[currentPos]['index'] ?? sequence - 1;
-                                    });
-                                  }
-                                  FlutterOverlayWindow.shareData({'action': 'prev'});
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white24,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
+                            // Header: Title and Pin
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    unitLabel.isEmpty ? '未选择' : unitLabel,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  padding: EdgeInsets.zero,
                                 ),
-                                child: const Icon(Icons.chevron_left, color: Colors.white),
+                                GestureDetector(
+                                  onTap: () async {
+                                    final pos = await FlutterOverlayWindow.getOverlayPosition();
+                                    FlutterOverlayWindow.shareData({'action': 'save_position', 'position': pos});
+                                    HapticFeedback.lightImpact();
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.push_pin_rounded, color: Colors.white70, size: 14),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            // Content
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                content.isEmpty ? '暂无内容' : content,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 14, color: Colors.white70),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            SizedBox(
-                              width: 120,
-                              height: 50,
-                              child: ElevatedButton(
-                                onPressed: () async {
-                                  await Clipboard.setData(ClipboardData(text: content));
-                                  HapticFeedback.selectionClick();
-                                  FlutterOverlayWindow.shareData({'action': 'copied', 'sequence': sequence});
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blueAccent,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
+                            const SizedBox(height: 12),
+                            // Controls
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _buildIconButton(
+                                  icon: Icons.chevron_left_rounded,
+                                  onTap: () {
+                                    if (records.isNotEmpty && currentPos > 0) {
+                                      setState(() {
+                                        currentPos -= 1;
+                                        content = records[currentPos]['content'] ?? '';
+                                        sequence = records[currentPos]['index'] ?? sequence - 1;
+                                        if (unitLabel.contains('-')) {
+                                           final parts = unitLabel.split('-');
+                                           if (parts.isNotEmpty) {
+                                              unitLabel = '${parts[0]}-$sequence';
+                                           }
+                                        }
+                                      });
+                                    }
+                                    FlutterOverlayWindow.shareData({'action': 'prev'});
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () async {
+                                      await Clipboard.setData(ClipboardData(text: content));
+                                      HapticFeedback.selectionClick();
+                                      FlutterOverlayWindow.shareData({'action': 'copied', 'sequence': sequence});
+                                    },
+                                    child: Container(
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF007AFF),
+                                        borderRadius: BorderRadius.circular(22),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: const Text(
+                                        '粘贴',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                                child: const Text('粘贴'),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            SizedBox(
-                              width: 50,
-                              height: 50,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  if (records.isNotEmpty && currentPos < records.length - 1) {
-                                    setState(() {
-                                      currentPos += 1;
-                                      content = records[currentPos]['content'] ?? '';
-                                      sequence = records[currentPos]['index'] ?? sequence + 1;
-                                    });
-                                  }
-                                  FlutterOverlayWindow.shareData({'action': 'next'});
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white24,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  padding: EdgeInsets.zero,
+                                const SizedBox(width: 8),
+                                _buildIconButton(
+                                  icon: Icons.chevron_right_rounded,
+                                  onTap: () {
+                                    if (records.isNotEmpty && currentPos < records.length - 1) {
+                                      setState(() {
+                                        currentPos += 1;
+                                        content = records[currentPos]['content'] ?? '';
+                                        sequence = records[currentPos]['index'] ?? sequence + 1;
+                                        if (unitLabel.contains('-')) {
+                                           final parts = unitLabel.split('-');
+                                           if (parts.isNotEmpty) {
+                                              unitLabel = '${parts[0]}-$sequence';
+                                           }
+                                        }
+                                      });
+                                    }
+                                    FlutterOverlayWindow.shareData({'action': 'next'});
+                                  },
                                 ),
-                                child: const Icon(Icons.chevron_right, color: Colors.white),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            SizedBox(
-                              width: 50,
-                              height: 50,
-                              child: ElevatedButton(
-                                onPressed: () async {
-                                  final pos = await FlutterOverlayWindow.getOverlayPosition();
-                                  FlutterOverlayWindow.shareData({'action': 'save_position', 'position': pos});
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white24,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  padding: EdgeInsets.zero,
-                                ),
-                                child: const Icon(Icons.push_pin, color: Colors.white),
-                              ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    width: 50,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        FlutterOverlayWindow.shareData({'action': 'closed'});
-                        FlutterOverlayWindow.closeOverlay();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: EdgeInsets.zero,
                       ),
-                      child: const Icon(Icons.close, color: Colors.white),
-                    ),
+                      const SizedBox(width: 12),
+                      // Close Button
+                      GestureDetector(
+                        onTap: () {
+                          FlutterOverlayWindow.shareData({'action': 'closed'});
+                          FlutterOverlayWindow.closeOverlay();
+                        },
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildIconButton({required IconData icon, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: Colors.white, size: 24),
       ),
     );
   }

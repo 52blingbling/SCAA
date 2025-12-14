@@ -1,18 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:async';
 import '../models/unit.dart';
 import '../models/scan_record.dart';
+import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
 class UnitService extends ChangeNotifier {
   List<Unit> _units = [];
   bool _isLoading = true;
+  final StreamController<dynamic> _overlayEventController = StreamController<dynamic>.broadcast();
+  StreamSubscription? _overlaySubscription;
 
   List<Unit> get units => _units;
   bool get isLoading => _isLoading;
+  Stream<dynamic> get overlayStream => _overlayEventController.stream;
 
   UnitService() {
     loadUnits();
+    _initOverlayListener();
+  }
+
+  void _initOverlayListener() {
+    try {
+      _overlaySubscription = FlutterOverlayWindow.overlayListener.listen((event) {
+        _overlayEventController.add(event);
+      }, onError: (e) {
+        debugPrint('Overlay listener error: $e');
+      });
+    } catch (e) {
+      debugPrint('Failed to initialize overlay listener: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _overlaySubscription?.cancel();
+    _overlayEventController.close();
+    super.dispose();
   }
 
   // 加载所有单元

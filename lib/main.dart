@@ -29,7 +29,39 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: '润农扫码激活辅助',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF007AFF), // iOS System Blue
+          background: const Color(0xFFF2F2F7), // iOS Grouped Background
+          surface: Colors.white,
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF2F2F7),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFFF2F2F7), // Transparent-like
+          surfaceTintColor: Colors.transparent,
+          centerTitle: true,
+          elevation: 0,
+          titleTextStyle: TextStyle(
+            color: Colors.black,
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.5,
+          ),
+          iconTheme: IconThemeData(color: Color(0xFF007AFF)),
+        ),
+        cardTheme: CardTheme(
+          color: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          margin: EdgeInsets.zero,
+        ),
+        dialogTheme: DialogTheme(
+          backgroundColor: Colors.white.withOpacity(0.9),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          elevation: 0,
+        ),
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: const HomeScreen(),

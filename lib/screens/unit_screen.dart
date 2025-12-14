@@ -29,37 +29,42 @@ class _UnitScreenState extends State<UnitScreen> {
   void initState() {
     super.initState();
     _checkOverlayPermission();
-    _overlaySub = FlutterOverlayWindow.overlayListener.listen((event) {
+    // Use the broadcast stream from UnitService instead of direct listener
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final unitService = Provider.of<UnitService>(context, listen: false);
-      final unit = unitService.getUnitById(widget.unitId);
-      if (unit == null) return;
-      if (event is Map) {
-        final m = Map<String, dynamic>.from(event);
-        final action = m['action'];
-        if (action == 'prev') {
-          setState(() {
-            if (_currentPos > 0) _currentPos -= 1;
-          });
-        } else if (action == 'next') {
-          setState(() {
-            if (_currentPos < unit.scanRecords.length - 1) _currentPos += 1;
-          });
-        } else if (action == 'save_position') {
-          OverlayService.savePosition();
-        } else if (action == 'closed') {
-          setState(() {
-            _showFloatingHelper = false;
+      _overlaySub = unitService.overlayStream.listen((event) {
+        if (!mounted) return;
+        final unit = unitService.getUnitById(widget.unitId);
+        if (unit == null) return;
+        if (event is Map) {
+          final m = Map<String, dynamic>.from(event);
+          final action = m['action'];
+          if (action == 'prev') {
+            setState(() {
+              if (_currentPos > 0) _currentPos -= 1;
+            });
+          } else if (action == 'next') {
+            setState(() {
+              if (_currentPos < unit.scanRecords.length - 1) _currentPos += 1;
+            });
+          } else if (action == 'save_position') {
+            OverlayService.savePosition();
+          } else if (action == 'closed') {
+            setState(() {
+              _showFloatingHelper = false;
+            });
+          }
+          if (unit.scanRecords.isEmpty) return;
+          _currentRecordIndex = unit.scanRecords[_currentPos].index;
+          final currentContent = unit.scanRecords[_currentPos].content;
+          OverlayService.sendData({
+            'unit_name': unit.name,
+            'sequence': unit.scanRecords[_currentPos].index,
+            'content': currentContent,
           });
         }
-        if (unit.scanRecords.isEmpty) return;
-        _currentRecordIndex = unit.scanRecords[_currentPos].index;
-        final currentContent = unit.scanRecords[_currentPos].content;
-        OverlayService.sendData({
-          'unit_name': unit.name,
-          'sequence': unit.scanRecords[_currentPos].index,
-          'content': currentContent,
-        });
-      }
+      });
     });
   }
 
@@ -102,14 +107,33 @@ class _UnitScreenState extends State<UnitScreen> {
                 centerTitle: true,
               ),
               body: unit.scanRecords.isEmpty
-                  ? const Center(
-                      child: Text(
-                        '暂无扫描记录\n点击底部扫码按钮开始扫描',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.qr_code_scanner_rounded, size: 64, color: Colors.grey[300]),
+                          const SizedBox(height: 16),
+                          const Text(
+                            '暂无扫描记录',
+                            style: TextStyle(fontSize: 18, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ScannerScreen(unitId: widget.unitId),
+                                ),
+                              );
+                            },
+                            child: const Text('点击扫码'),
+                          ),
+                        ],
                       ),
                     )
                   : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100), // Bottom padding for floating bar
                       itemCount: unit.scanRecords.length,
                       itemBuilder: (context, index) {
                         final record = unit.scanRecords[index];
@@ -117,12 +141,17 @@ class _UnitScreenState extends State<UnitScreen> {
                           key: Key(record.id),
                           direction: DismissDirection.endToStart,
                           background: Container(
-                            color: Colors.red,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                             alignment: Alignment.centerRight,
                             padding: const EdgeInsets.only(right: 20),
                             child: const Icon(
-                              Icons.delete,
+                              Icons.delete_outline_rounded,
                               color: Colors.white,
+                              size: 28,
                             ),
                           ),
                           confirmDismiss: (direction) async {
@@ -139,7 +168,7 @@ class _UnitScreenState extends State<UnitScreen> {
                                     ),
                                     TextButton(
                                       onPressed: () => Navigator.pop(context, true),
-                                      child: const Text('删除'),
+                                      child: const Text('删除', style: TextStyle(color: Colors.red)),
                                     ),
                                   ],
                                 );
@@ -149,21 +178,58 @@ class _UnitScreenState extends State<UnitScreen> {
                           onDismissed: (direction) {
                             unitService.deleteScanRecord(unit.id, record.id);
                           },
-                          child: Card(
-                            margin: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
                             child: ListTile(
-                              title: SelectableText('${record.index}. ${record.content}'),
-                              subtitle: Text(_formatDateTime(record.scannedAt)),
                               contentPadding: const EdgeInsets.all(16),
+                              title: SelectableText(
+                                '${record.index}. ${record.content}',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.4,
+                                ),
+                              ),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  _formatDateTime(record.scannedAt),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             ),
                           ),
                         );
                       },
                     ),
-              bottomNavigationBar: BottomAppBar(
+              bottomNavigationBar: Container(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom + 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -4),
+                    ),
+                  ],
+                ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
@@ -175,15 +241,20 @@ class _UnitScreenState extends State<UnitScreen> {
                             ),
                           );
                         },
-                        icon: const Icon(Icons.qr_code_scanner),
+                        icon: const Icon(Icons.qr_code_scanner_rounded),
                         label: const Text('扫码'),
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.all(16),
-                          shape: const RoundedRectangleBorder(),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: const Color(0xFF007AFF),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 1),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: _overlayPermissionGranted
@@ -227,14 +298,23 @@ class _UnitScreenState extends State<UnitScreen> {
                                 }
                               }
                             : _requestOverlayPermission,
-                        icon: const Icon(Icons.extension),
-                        label: const Text('快捷助手'),
+                        icon: const Icon(Icons.view_agenda_outlined),
+                        label: const Text('助手'),
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                           backgroundColor: _showFloatingHelper 
                             ? Colors.orange 
-                            : null,
-                          shape: const RoundedRectangleBorder(),
+                            : Colors.white,
+                          foregroundColor: _showFloatingHelper 
+                            ? Colors.white 
+                            : Colors.black87,
+                          elevation: 0,
+                          side: _showFloatingHelper 
+                            ? BorderSide.none 
+                            : BorderSide(color: Colors.grey[300]!),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                       ),
                     ),
@@ -242,7 +322,6 @@ class _UnitScreenState extends State<UnitScreen> {
                 ),
               ),
             ),
-            // 系统级悬浮窗由 OverlayService 管理，此处不再显示内嵌悬浮窗
           ],
         );
       },
