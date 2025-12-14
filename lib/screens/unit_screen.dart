@@ -23,6 +23,7 @@ class _UnitScreenState extends State<UnitScreen> {
   int _currentRecordIndex = 1;
   bool _overlayPermissionGranted = false;
   StreamSubscription? _overlaySub;
+  int _currentPos = 0;
 
   @override
   void initState() {
@@ -37,27 +38,25 @@ class _UnitScreenState extends State<UnitScreen> {
         final action = m['action'];
         if (action == 'prev') {
           setState(() {
-            if (_currentRecordIndex > 1) _currentRecordIndex -= 1;
+            if (_currentPos > 0) _currentPos -= 1;
           });
         } else if (action == 'next') {
           setState(() {
-            if (_currentRecordIndex < unit.scanRecords.length) {
-              _currentRecordIndex += 1;
-            }
+            if (_currentPos < unit.scanRecords.length - 1) _currentPos += 1;
           });
         } else if (action == 'save_position') {
           OverlayService.savePosition();
+        } else if (action == 'closed') {
+          setState(() {
+            _showFloatingHelper = false;
+          });
         }
-        String currentContent = '';
-        for (final r in unit.scanRecords) {
-          if (r.index == _currentRecordIndex) {
-            currentContent = r.content;
-            break;
-          }
-        }
+        if (unit.scanRecords.isEmpty) return;
+        _currentRecordIndex = unit.scanRecords[_currentPos].index;
+        final currentContent = unit.scanRecords[_currentPos].content;
         OverlayService.sendData({
           'unit_name': unit.name,
-          'sequence': _currentRecordIndex,
+          'sequence': unit.scanRecords[_currentPos].index,
           'content': currentContent,
         });
       }
@@ -187,20 +186,16 @@ class _UnitScreenState extends State<UnitScreen> {
                                   _showFloatingHelper = !_showFloatingHelper;
                                 });
                                 if (_showFloatingHelper) {
+                                  _currentPos = 0;
                                   _currentRecordIndex = unit.scanRecords.isNotEmpty
-                                      ? unit.scanRecords.first.index
+                                      ? unit.scanRecords[_currentPos].index
                                       : 1;
                                   OverlayService.showOverlay().then((_) {
-                                    String currentContent = '';
-                                    for (final r in unit.scanRecords) {
-                                      if (r.index == _currentRecordIndex) {
-                                        currentContent = r.content;
-                                        break;
-                                      }
-                                    }
+                                    if (unit.scanRecords.isEmpty) return;
+                                    final currentContent = unit.scanRecords[_currentPos].content;
                                     OverlayService.sendData({
                                       'unit_name': unit.name,
-                                      'sequence': _currentRecordIndex,
+                                      'sequence': unit.scanRecords[_currentPos].index,
                                       'content': currentContent,
                                     });
                                   });

@@ -6,6 +6,7 @@ import '../services/permission_service.dart';
 import '../services/audio_service.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/services.dart';
+import 'dart:ui' as ui;
 
 class ScannerScreen extends StatefulWidget {
   final String unitId;
@@ -21,6 +22,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
   String? _resultCode;
   bool _permissionGranted = false;
   bool _scanSuccess = false;
+  bool _isProcessing = false;
+  bool _invalidFeedback = false;
 
   @override
   void initState() {
@@ -80,29 +83,35 @@ class _ScannerScreenState extends State<ScannerScreen> {
                         ),
                         onDetect: _onDetect,
                       ),
-                      Container(
-                        color: Colors.black.withOpacity(0.2),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final size = 260.0;
+                          final rect = Rect.fromCenter(
+                            center: Offset(constraints.maxWidth / 2, constraints.maxHeight / 2),
+                            width: size,
+                            height: size,
+                          );
+                          return CustomPaint(
+                            painter: _ScannerOverlayPainter(
+                              hole: RRect.fromRectAndRadius(rect, const Radius.circular(16)),
+                              borderColor: _invalidFeedback
+                                  ? Colors.redAccent
+                                  : (_scanSuccess ? Colors.greenAccent : Colors.white),
+                            ),
+                          );
+                        },
                       ),
                       Center(
                         child: Container(
                           width: 260,
                           height: 260,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: _scanSuccess ? Colors.greenAccent : Colors.white,
-                              width: 3,
-                            ),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              '对准二维码',
-                              style: TextStyle(color: Colors.white70),
-                            ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            '将二维码置于白色框内',
+                            style: TextStyle(color: Colors.white70),
                           ),
                         ),
-                      ),
+                      )
                     ],
                   ),
                 ),
@@ -139,29 +148,73 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
   void _onDetect(BarcodeCapture capture) async {
     if (!_permissionGranted) return;
+    if (_isProcessing) return;
     final barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
     final first = barcodes.first;
     final code = first.rawValue ?? first.displayValue;
     if (code == null || code.isEmpty) return;
+    final text = code.trim();
+    if (text.length > 16 || !RegExp(r'^[A-Za-z0-9]+$').hasMatch(text)) {
+      setState(() {
+        _invalidFeedback = true;
+      });
+      AudioService.playScanSound();
+      HapticFeedback.mediumImpact();
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) {
+        setState(() {
+          _invalidFeedback = false;
+        });
+      }
+      return;
+    }
+    _isProcessing = true;
     setState(() {
-      _resultCode = code;
+      _resultCode = text;
       _scanSuccess = true;
     });
     AudioService.playScanSound();
     HapticFeedback.lightImpact();
+    await _controller?.stop();
     await Future.delayed(const Duration(milliseconds: 300));
     if (mounted) {
       Provider.of<UnitService>(context, listen: false)
-          .addScanRecord(widget.unitId, code);
+          .addScanRecord(widget.unitId, text);
       setState(() => _scanSuccess = false);
       Navigator.pop(context);
     }
+    _isProcessing = false;
   }
 
   @override
   void dispose() {
     _controller?.dispose();
     super.dispose();
+  }
+}
+
+class _ScannerOverlayPainter extends CustomPainter {
+  final RRect hole;
+  final Color borderColor;
+  _ScannerOverlayPainter({required this.hole, required this.borderColor});
+  @override
+  void paint(ui.Canvas canvas, ui.Size size) {
+    final overlayPaint = Paint()..color = const Color(0x88000000);
+    final full = Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+    final cutout = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..addRRect(hole);
+    canvas.drawPath(cutout, overlayPaint);
+    final borderPaint = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+    canvas.drawRRect(hole, borderPaint);
+  }
+  @override
+  bool shouldRepaint(covariant _ScannerOverlayPainter oldDelegate) {
+    return oldDelegate.borderColor != borderColor || oldDelegate.hole != hole;
   }
 }

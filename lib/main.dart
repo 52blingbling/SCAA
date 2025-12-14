@@ -60,7 +60,7 @@ class _GlobalOverlayState extends State<_GlobalOverlay> {
       if (event is Map) {
         final m = Map<String, dynamic>.from(event);
         setState(() {
-          unitLabel = '${m['unit_name'] ?? ''}单元-${m['sequence'] ?? 1}';
+          unitLabel = '${m['unit_name'] ?? ''}-${m['sequence'] ?? 1}';
           content = m['content'] ?? '';
           sequence = m['sequence'] ?? 1;
         });
@@ -86,10 +86,10 @@ class _GlobalOverlayState extends State<_GlobalOverlay> {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
           child: Container(
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.5),
@@ -102,106 +102,105 @@ class _GlobalOverlayState extends State<_GlobalOverlay> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        unitLabel.isEmpty ? '未选择单元' : unitLabel,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          unitLabel.isEmpty ? '未选择' : unitLabel,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      SizedBox(
-                        width: 220,
-                        child: Text(
+                        const SizedBox(height: 6),
+                        Text(
                           content.isEmpty ? '暂无内容' : content,
-                          maxLines: 2,
+                          maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 13),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          SizedBox(
-                            width: 50,
-                            height: 50,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                FlutterOverlayWindow.shareData({'action': 'prev'});
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white24,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            SizedBox(
+                              width: 50,
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  FlutterOverlayWindow.shareData({'action': 'prev'});
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white24,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: EdgeInsets.zero,
                                 ),
-                                padding: EdgeInsets.zero,
+                                child: const Icon(Icons.chevron_left, color: Colors.white),
                               ),
-                              child: const Icon(Icons.chevron_left, color: Colors.white),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 120,
-                            height: 50,
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                await Clipboard.setData(ClipboardData(text: content));
-                                HapticFeedback.selectionClick();
-                                FlutterOverlayWindow.shareData({'action': 'copied', 'sequence': sequence});
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blueAccent,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: 120,
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  await Clipboard.setData(ClipboardData(text: content));
+                                  HapticFeedback.selectionClick();
+                                  FlutterOverlayWindow.shareData({'action': 'copied', 'sequence': sequence});
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blueAccent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
+                                child: const Text('粘贴'),
                               ),
-                              child: const Text('粘贴'),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 50,
-                            height: 50,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                FlutterOverlayWindow.shareData({'action': 'next'});
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white24,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: 50,
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  FlutterOverlayWindow.shareData({'action': 'next'});
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white24,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: EdgeInsets.zero,
                                 ),
-                                padding: EdgeInsets.zero,
+                                child: const Icon(Icons.chevron_right, color: Colors.white),
                               ),
-                              child: const Icon(Icons.chevron_right, color: Colors.white),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 50,
-                            height: 50,
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                final pos = await FlutterOverlayWindow.getOverlayPosition();
-                                FlutterOverlayWindow.shareData({'action': 'save_position', 'position': pos});
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white24,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: 50,
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  final pos = await FlutterOverlayWindow.getOverlayPosition();
+                                  FlutterOverlayWindow.shareData({'action': 'save_position', 'position': pos});
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white24,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: EdgeInsets.zero,
                                 ),
-                                padding: EdgeInsets.zero,
+                                child: const Icon(Icons.push_pin, color: Colors.white),
                               ),
-                              child: const Icon(Icons.push_pin, color: Colors.white),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(width: 8),
                   SizedBox(
@@ -209,6 +208,7 @@ class _GlobalOverlayState extends State<_GlobalOverlay> {
                     height: 50,
                     child: ElevatedButton(
                       onPressed: () {
+                        FlutterOverlayWindow.shareData({'action': 'closed'});
                         FlutterOverlayWindow.closeOverlay();
                       },
                       style: ElevatedButton.styleFrom(
