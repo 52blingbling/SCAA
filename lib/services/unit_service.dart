@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:async';
 import '../models/unit.dart';
@@ -24,6 +25,9 @@ class UnitService extends ChangeNotifier {
   void _initOverlayListener() {
     try {
       _overlaySubscription = FlutterOverlayWindow.overlayListener.listen((event) {
+        if (event is Map && event['action'] == 'copied' && event['content'] is String) {
+          Clipboard.setData(ClipboardData(text: event['content']));
+        }
         _overlayEventController.add(event);
       }, onError: (e) {
         debugPrint('Overlay listener error: $e');

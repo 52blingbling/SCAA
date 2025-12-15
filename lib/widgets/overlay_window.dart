@@ -134,7 +134,7 @@ class _OverlayWindowState extends State<OverlayWindow> {
       const double spacer2 = 12;
       const double controlsHeight = 44;
       const double containerVerticalPadding = 32; // 16 top + 16 bottom
-      const double shadowMargin = 24; // 12 top + 12 bottom
+      const double shadowMargin = 0;
       
       // 5. 总高度计算
       final double totalHeight = labelHeight + spacer1 + contentBoxHeight + spacer2 + controlsHeight + containerVerticalPadding + shadowMargin;
@@ -196,8 +196,8 @@ class _OverlayWindowState extends State<OverlayWindow> {
           Center(
             child: Container(
               key: _containerKey,
-              width: 360, // 增加宽度适配长文本
-              margin: const EdgeInsets.all(12), // 给阴影留出空间
+              width: 360,
+              margin: EdgeInsets.zero,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
@@ -308,7 +308,11 @@ class _OverlayWindowState extends State<OverlayWindow> {
                                         _toastMessage = '已复制';
                                         _isToastError = false;
                                       });
-                                      FlutterOverlayWindow.shareData({'action': 'copied', 'sequence': sequence});
+                                      FlutterOverlayWindow.shareData({
+                                        'action': 'copied',
+                                        'sequence': sequence,
+                                        'content': content,
+                                      });
                                     } catch (e) {
                                       debugPrint('Clipboard error: $e');
                                       setState(() {
