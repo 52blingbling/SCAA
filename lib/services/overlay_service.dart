@@ -29,24 +29,24 @@ class OverlayService {
       final y = prefs.getInt('overlay_y');
       if (x != null && y != null) {
         await FlutterOverlayWindow.showOverlay(
-          enableDrag: true,
+          enableDrag: false,
           flag: OverlayFlag.defaultFlag,
           positionGravity: PositionGravity.none,
           overlayTitle: '快捷助手已开启',
           overlayContent: '跨应用悬浮窗',
-          width: 1600,
-          height: 500,
+          width: 360,
+          height: 200,
           startPosition: OverlayPosition(x.toDouble(), y.toDouble()),
         );
       } else {
         await FlutterOverlayWindow.showOverlay(
-          enableDrag: true,
+          enableDrag: false,
           flag: OverlayFlag.defaultFlag,
           positionGravity: PositionGravity.none,
           overlayTitle: '快捷助手已开启',
           overlayContent: '跨应用悬浮窗',
-          width: 1600,
-          height: 500,
+          width: 360,
+          height: 200,
           alignment: OverlayAlignment.center,
         );
       }

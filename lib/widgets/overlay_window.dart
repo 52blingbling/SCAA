@@ -23,6 +23,9 @@ class _OverlayWindowState extends State<OverlayWindow> {
   bool _isToastError = false;
 
   final GlobalKey _containerKey = GlobalKey();
+  double _overlayX = 0;
+  double _overlayY = 0;
+  bool _hasInitialPosition = false;
 
   @override
   void initState() {
@@ -31,6 +34,8 @@ class _OverlayWindowState extends State<OverlayWindow> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _updateOverlaySize();
     });
+
+    _initOverlayPosition();
 
     FlutterOverlayWindow.overlayListener.listen((event) async {
       if (event is Map) {
@@ -102,6 +107,29 @@ class _OverlayWindowState extends State<OverlayWindow> {
     });
   }
 
+  Future<void> _initOverlayPosition() async {
+    try {
+      final pos = await FlutterOverlayWindow.getOverlayPosition();
+      if (pos != null) {
+        final dynamic d = pos;
+        final double ox = (d.x is double) ? d.x : (d.dx is double ? d.dx : 0.0);
+        final double oy = (d.y is double) ? d.y : (d.dy is double ? d.dy : 0.0);
+        _overlayX = ox;
+        _overlayY = oy;
+        _hasInitialPosition = true;
+      }
+    } catch (e) {
+      debugPrint('Error init overlay position: $e');
+    }
+  }
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    if (!_hasInitialPosition) return;
+    _overlayX += details.delta.dx;
+    _overlayY += details.delta.dy;
+    FlutterOverlayWindow.moveOverlay(OverlayPosition(_overlayX, _overlayY));
+  }
+
   // 预计算尺寸逻辑
   void _preCalculateAndResize() {
     try {
@@ -139,10 +167,9 @@ class _OverlayWindowState extends State<OverlayWindow> {
       // 5. 总高度计算
       final double totalHeight = labelHeight + spacer1 + contentBoxHeight + spacer2 + controlsHeight + containerVerticalPadding + shadowMargin;
       
-      // 6. 执行调整
-      final dpr = View.of(context).devicePixelRatio;
-      final int w = (containerWidth * dpr).toInt() + 4;
-      final int h = (totalHeight * dpr).toInt() + 4;
+      // 6. 执行调整（width/height 使用逻辑像素，插件内部会换算）
+      final int w = containerWidth.toInt();
+      final int h = totalHeight.toInt();
       
       // 使用 resizeOverlay 调整 native 窗口
       FlutterOverlayWindow.resizeOverlay(w, h, true);
@@ -173,12 +200,8 @@ class _OverlayWindowState extends State<OverlayWindow> {
       final RenderBox? renderBox = _containerKey.currentContext?.findRenderObject() as RenderBox?;
       if (renderBox != null) {
         final size = renderBox.size;
-        // 获取设备像素密度
-        final dpr = View.of(context).devicePixelRatio;
-        // 恢复乘以 dpr，因为 resizeOverlay 需要物理像素
-        // 用户反馈窗口太小，可能是因为之前移除了 dpr 乘法
-        final int w = (size.width * dpr).toInt() + 4; 
-        final int h = (size.height * dpr).toInt() + 4;
+        final int w = size.width.toInt();
+        final int h = size.height.toInt();
         await FlutterOverlayWindow.resizeOverlay(w, h, true);
       }
     } catch (e) {
@@ -194,7 +217,9 @@ class _OverlayWindowState extends State<OverlayWindow> {
         alignment: Alignment.center,
         children: [
           Center(
-            child: Container(
+            child: GestureDetector(
+              onPanUpdate: _onDragUpdate,
+              child: Container(
               key: _containerKey,
               width: 360,
               margin: EdgeInsets.zero,
@@ -401,8 +426,7 @@ class _OverlayWindowState extends State<OverlayWindow> {
             ),
           ),
         ),
-      ),
-      ),
+        ),
           // Toast Overlay
       if (_showToast)
             Positioned(
