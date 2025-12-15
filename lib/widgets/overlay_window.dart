@@ -309,8 +309,9 @@ class _OverlayWindowState extends State<OverlayWindow> {
           ),
         ),
       ),
-          // Toast Overlay
-          if (_showToast)
+      ),
+      // Toast Overlay
+      if (_showToast)
             Positioned(
               bottom: 80,
               child: Container(
