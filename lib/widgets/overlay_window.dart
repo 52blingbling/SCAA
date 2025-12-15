@@ -106,9 +106,12 @@ class _OverlayWindowState extends State<OverlayWindow> {
       final RenderBox? renderBox = _containerKey.currentContext?.findRenderObject() as RenderBox?;
       if (renderBox != null) {
         final size = renderBox.size;
-        // 增加少量 buffer 确保阴影和边缘不被截断
-        final int w = size.width.toInt() + 4; 
-        final int h = size.height.toInt() + 4;
+        // 获取设备像素密度
+        final dpr = View.of(context).devicePixelRatio;
+        // 恢复乘以 dpr，因为 resizeOverlay 需要物理像素
+        // 用户反馈窗口太小，可能是因为之前移除了 dpr 乘法
+        final int w = (size.width * dpr).toInt() + 4; 
+        final int h = (size.height * dpr).toInt() + 4;
         await FlutterOverlayWindow.resizeOverlay(w, h, true);
       }
     } catch (e) {
