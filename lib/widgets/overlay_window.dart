@@ -19,6 +19,8 @@ class _OverlayWindowState extends State<OverlayWindow> {
   int currentPos = 0;
   bool _isCopied = false;
   bool _showToast = false;
+  String _toastMessage = '已复制';
+  bool _isToastError = false;
 
   final GlobalKey _containerKey = GlobalKey();
 
@@ -77,11 +79,11 @@ class _OverlayWindowState extends State<OverlayWindow> {
                // sequence 保持不变或设为 1
             }
           }
-          // 内容更新后，重新调整窗口大小
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-             _updateOverlaySize();
-          });
+          
+          // 预计算尺寸并调整窗口
+          _preCalculateAndResize();
         });
+        
         if (m['feedback'] == 'success') {
           setState(() => borderColor = Colors.greenAccent);
           HapticFeedback.lightImpact();
@@ -99,6 +101,71 @@ class _OverlayWindowState extends State<OverlayWindow> {
       }
     });
   }
+
+  // 预计算尺寸逻辑
+  void _preCalculateAndResize() {
+    try {
+      // 1. 基础参数定义 (与 build 方法中的布局参数保持一致)
+      const double containerWidth = 360;
+      const double horizontalPadding = 28; // 16 + 12
+      const double contentWidth = containerWidth - horizontalPadding;
+      
+      // 2. 计算 Unit Label 高度
+      final labelHeight = _calculateTextHeight(
+        unitLabel.isEmpty ? '未选择' : unitLabel,
+        const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          fontFamily: '.SF Pro Text',
+          height: 1.3,
+        ),
+        contentWidth,
+        2, // maxLines
+      );
+      
+      // 3. 计算 Content 高度
+      // 内部 Container padding: vertical 12 * 2 = 24
+      // Text height: fontSize 16 * 1.2 = 19.2
+      // Total box height = 24 + 19.2 = 43.2 (approx)
+      const double contentBoxHeight = 44.0; // 固定一行的高度近似值
+      
+      // 4. 其他固定高度
+      const double spacer1 = 8;
+      const double spacer2 = 12;
+      const double controlsHeight = 44;
+      const double containerVerticalPadding = 32; // 16 top + 16 bottom
+      const double shadowMargin = 24; // 12 top + 12 bottom
+      
+      // 5. 总高度计算
+      final double totalHeight = labelHeight + spacer1 + contentBoxHeight + spacer2 + controlsHeight + containerVerticalPadding + shadowMargin;
+      
+      // 6. 执行调整
+      final dpr = View.of(context).devicePixelRatio;
+      final int w = (containerWidth * dpr).toInt() + 4;
+      final int h = (totalHeight * dpr).toInt() + 4;
+      
+      // 使用 resizeOverlay 调整 native 窗口
+      FlutterOverlayWindow.resizeOverlay(w, h, true);
+      
+    } catch (e) {
+      debugPrint('Error pre-calculating size: $e');
+      // Fallback to post-frame callback
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _updateOverlaySize();
+      });
+    }
+  }
+
+  double _calculateTextHeight(String text, TextStyle style, double maxWidth, int maxLines) {
+    final TextPainter textPainter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: maxLines,
+    );
+    textPainter.layout(minWidth: 0, maxWidth: maxWidth);
+    return textPainter.height;
+  }
+
 
   Future<void> _updateOverlaySize() async {
     if (!mounted) return;
@@ -187,15 +254,19 @@ class _OverlayWindowState extends State<OverlayWindow> {
                               color: Colors.white.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text(
-                              content.isEmpty ? '暂无内容' : content,
-                              maxLines: 1, // 恢复为1行，因为已有16字符限制
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 16, // 稍微调大字体，提升可读性
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white70,
-                                height: 1.2,
+                            child: AnimatedSize(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.decelerate,
+                              child: Text(
+                                content.isEmpty ? '暂无内容' : content,
+                                maxLines: 1, // 恢复为1行，因为已有16字符限制
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 16, // 稍微调大字体，提升可读性
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white70,
+                                  height: 1.2,
+                                ),
                               ),
                             ),
                           ),
@@ -218,6 +289,7 @@ class _OverlayWindowState extends State<OverlayWindow> {
                                             unitLabel = '${parts[0]}-$sequence';
                                          }
                                       }
+                                      _preCalculateAndResize();
                                     });
                                   }
                                   FlutterOverlayWindow.shareData({'action': 'prev'});
@@ -227,13 +299,26 @@ class _OverlayWindowState extends State<OverlayWindow> {
                               Expanded(
                                 child: _OverlayButton(
                                   onTap: () async {
-                                    await Clipboard.setData(ClipboardData(text: content));
-                                    HapticFeedback.selectionClick();
-                                    setState(() {
-                                      _isCopied = true;
-                                      _showToast = true;
-                                    });
-                                    FlutterOverlayWindow.shareData({'action': 'copied', 'sequence': sequence});
+                                    try {
+                                      await Clipboard.setData(ClipboardData(text: content));
+                                      HapticFeedback.selectionClick();
+                                      setState(() {
+                                        _isCopied = true;
+                                        _showToast = true;
+                                        _toastMessage = '已复制';
+                                        _isToastError = false;
+                                      });
+                                      FlutterOverlayWindow.shareData({'action': 'copied', 'sequence': sequence});
+                                    } catch (e) {
+                                      debugPrint('Clipboard error: $e');
+                                      setState(() {
+                                        _isCopied = false;
+                                        _showToast = true;
+                                        _toastMessage = '复制失败';
+                                        _isToastError = true;
+                                      });
+                                    }
+                                    
                                     Future.delayed(const Duration(seconds: 1, milliseconds: 500), () {
                                        if (mounted) {
                                          setState(() {
@@ -278,6 +363,7 @@ class _OverlayWindowState extends State<OverlayWindow> {
                                             unitLabel = '${parts[0]}-$sequence';
                                          }
                                       }
+                                      _preCalculateAndResize();
                                     });
                                   }
                                   FlutterOverlayWindow.shareData({'action': 'next'});
@@ -313,24 +399,28 @@ class _OverlayWindowState extends State<OverlayWindow> {
         ),
       ),
       ),
-      // Toast Overlay
+          // Toast Overlay
       if (_showToast)
             Positioned(
               bottom: 80,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.8),
+                  color: _isToastError ? Colors.red.withOpacity(0.9) : Colors.black.withOpacity(0.8),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.check_circle, color: Colors.white, size: 20),
-                    SizedBox(width: 8),
+                  children: [
+                    Icon(
+                      _isToastError ? Icons.error_outline : Icons.check_circle, 
+                      color: Colors.white, 
+                      size: 20
+                    ),
+                    const SizedBox(width: 8),
                     Text(
-                      '已复制',
-                      style: TextStyle(color: Colors.white, fontSize: 14),
+                      _toastMessage,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
                     ),
                   ],
                 ),
