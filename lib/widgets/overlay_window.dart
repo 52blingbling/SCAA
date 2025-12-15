@@ -18,6 +18,7 @@ class _OverlayWindowState extends State<OverlayWindow> {
   List<Map<String, dynamic>> records = [];
   int currentPos = 0;
   bool _isCopied = false;
+  bool _showToast = false;
 
   final GlobalKey _containerKey = GlobalKey();
 
@@ -105,11 +106,9 @@ class _OverlayWindowState extends State<OverlayWindow> {
       final RenderBox? renderBox = _containerKey.currentContext?.findRenderObject() as RenderBox?;
       if (renderBox != null) {
         final size = renderBox.size;
-        // 获取设备像素密度
-        final dpr = View.of(context).devicePixelRatio;
-        // 计算物理像素尺寸，适当增加一点 buffer 防止截断
-        final int w = (size.width * dpr).toInt() + 2; 
-        final int h = (size.height * dpr).toInt() + 2;
+        // 增加少量 buffer 确保阴影和边缘不被截断
+        final int w = size.width.toInt() + 4; 
+        final int h = size.height.toInt() + 4;
         await FlutterOverlayWindow.resizeOverlay(w, h, true);
       }
     } catch (e) {
@@ -121,21 +120,25 @@ class _OverlayWindowState extends State<OverlayWindow> {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      child: Center(
-        child: Container(
-          key: _containerKey,
-          width: 340, // 固定宽度
-          decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 20,
-              spreadRadius: 5,
-            )
-          ],
-        ),
-        child: ClipRRect(
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Center(
+            child: Container(
+              key: _containerKey,
+              width: 360, // 增加宽度适配长文本
+              margin: const EdgeInsets.all(12), // 给阴影留出空间
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  )
+                ],
+              ),
+              child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
@@ -145,7 +148,7 @@ class _OverlayWindowState extends State<OverlayWindow> {
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: borderColor.withOpacity(0.3), width: 1),
               ),
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 12, 16), // 右侧减少padding给关闭按钮留空间
               child: DefaultTextStyle(
                 style: const TextStyle(
                   color: Colors.white,
@@ -160,31 +163,37 @@ class _OverlayWindowState extends State<OverlayWindow> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Header: Only Title (Removed Pin)
+                          // Header: Unit Label
                           Text(
                             unitLabel.isEmpty ? '未选择' : unitLabel,
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,
+                              height: 1.3,
                             ),
-                            maxLines: 1,
+                            maxLines: 2, // 允许2行显示
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 8),
                           // Content
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               content.isEmpty ? '暂无内容' : content,
-                              maxLines: 2,
+                              maxLines: 1, // 恢复为1行，因为已有16字符限制
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 14, color: Colors.white70),
+                              style: const TextStyle(
+                                fontSize: 16, // 稍微调大字体，提升可读性
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white70,
+                                height: 1.2,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -213,12 +222,13 @@ class _OverlayWindowState extends State<OverlayWindow> {
                               ),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: GestureDetector(
+                                child: _OverlayButton(
                                   onTap: () async {
                                     await Clipboard.setData(ClipboardData(text: content));
                                     HapticFeedback.selectionClick();
                                     setState(() {
                                       _isCopied = true;
+                                      _showToast = true;
                                     });
                                     FlutterOverlayWindow.shareData({'action': 'copied', 'sequence': sequence});
                                     Future.delayed(const Duration(seconds: 1, milliseconds: 500), () {
@@ -228,20 +238,24 @@ class _OverlayWindowState extends State<OverlayWindow> {
                                          });
                                        }
                                     });
+                                    Future.delayed(const Duration(seconds: 2), () {
+                                       if (mounted) {
+                                         setState(() {
+                                           _showToast = false;
+                                         });
+                                       }
+                                    });
                                   },
-                                  child: Container(
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      color: _isCopied ? Colors.green : const Color(0xFF007AFF),
-                                      borderRadius: BorderRadius.circular(22),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      _isCopied ? '已复制' : '复制',
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                  height: 44,
+                                  backgroundColor: _isCopied ? Colors.green : const Color(0xFF007AFF),
+                                  pressedColor: _isCopied ? Colors.green[700]! : const Color(0xFF0056B3),
+                                  borderRadius: BorderRadius.circular(22),
+                                  child: Text(
+                                    _isCopied ? '已复制' : '复制',
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
                                     ),
                                   ),
                                 ),
@@ -295,20 +309,96 @@ class _OverlayWindowState extends State<OverlayWindow> {
           ),
         ),
       ),
-    ));
+          // Toast Overlay
+          if (_showToast)
+            Positioned(
+              bottom: 80,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.check_circle, color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      '已复制',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _buildIconButton({required IconData icon, required VoidCallback onTap}) {
-    return GestureDetector(
+    return _OverlayButton(
       onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
+      width: 44,
+      height: 44,
+      backgroundColor: Colors.white.withOpacity(0.15),
+      pressedColor: Colors.white.withOpacity(0.4),
+      shape: BoxShape.circle,
+      child: Icon(icon, color: Colors.white, size: 24),
+    );
+  }
+}
+
+class _OverlayButton extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  final Color backgroundColor;
+  final Color pressedColor;
+  final BorderRadius? borderRadius;
+  final BoxShape shape;
+  final double? width;
+  final double? height;
+  final AlignmentGeometry? alignment;
+
+  const _OverlayButton({
+    Key? key,
+    required this.child,
+    required this.onTap,
+    required this.backgroundColor,
+    required this.pressedColor,
+    this.borderRadius,
+    this.shape = BoxShape.rectangle,
+    this.width,
+    this.height,
+    this.alignment,
+  }) : super(key: key);
+
+  @override
+  State<_OverlayButton> createState() => _OverlayButtonState();
+}
+
+class _OverlayButtonState extends State<_OverlayButton> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
+      onTap: widget.onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 100),
+        width: widget.width,
+        height: widget.height,
+        alignment: widget.alignment ?? Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          shape: BoxShape.circle,
+          color: _isPressed ? widget.pressedColor : widget.backgroundColor,
+          borderRadius: widget.shape == BoxShape.circle ? null : widget.borderRadius,
+          shape: widget.shape,
         ),
-        child: Icon(icon, color: Colors.white, size: 24),
+        child: widget.child,
       ),
     );
   }

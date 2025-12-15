@@ -34,6 +34,8 @@ class OverlayService {
           positionGravity: PositionGravity.none,
           overlayTitle: '快捷助手已开启',
           overlayContent: '跨应用悬浮窗',
+          width: 380,
+          height: 350,
           startPosition: OverlayPosition(x.toDouble(), y.toDouble()),
         );
       } else {
@@ -43,6 +45,8 @@ class OverlayService {
           positionGravity: PositionGravity.none,
           overlayTitle: '快捷助手已开启',
           overlayContent: '跨应用悬浮窗',
+          width: 380,
+          height: 350,
           alignment: OverlayAlignment.center,
         );
       }
