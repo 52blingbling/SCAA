@@ -187,7 +187,7 @@ class _OverlayWindowState extends State<OverlayWindow> {
       color: Colors.transparent,
       child: Stack(
         alignment: Alignment.center,
-        children: [
+        children: <Widget>[
           Center(
             child: Container(
               key: _containerKey,
@@ -452,43 +452,41 @@ class _OverlayWindowState extends State<OverlayWindow> {
                 ),
               ),
             ),
-          ),
-          if (_showToast)
-            Positioned(
-              bottom: 12,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: _isToastError
-                      ? Colors.red.withOpacity(0.9)
-                      : Colors.black.withOpacity(0.8),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _isToastError
-                          ? Icons.error_outline
-                          : Icons.check_circle,
+          _showToast ? Positioned(
+            bottom: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 10,
+              ),
+              decoration: BoxDecoration(
+                color: _isToastError
+                    ? Colors.red.withOpacity(0.9)
+                    : Colors.black.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Icon(
+                    _isToastError
+                        ? Icons.error_outline
+                        : Icons.check_circle,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _toastMessage,
+                    style: const TextStyle(
                       color: Colors.white,
-                      size: 20,
+                      fontSize: 14,
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _toastMessage,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
+          ) : Container(),
         ],
       ),
     );
