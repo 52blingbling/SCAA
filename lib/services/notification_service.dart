@@ -34,7 +34,7 @@ class NotificationService {
       initializationSettings,
       onDidReceiveNotificationResponse: (details) {
         // 处理通知点击事件
-        _handleNotificationAction(details.payload);
+        _handleNotificationAction(details);
       },
       onDidReceiveBackgroundNotificationResponse: _handleNotificationAction,
     );
@@ -50,7 +50,6 @@ class NotificationService {
       '扫码助手通知', // 渠道名称
       description: '用于快速复制扫码内容', // 渠道描述
       importance: Importance.high, // 重要性
-      priority: Priority.high, // 优先级
     );
 
     // 注册通知渠道
