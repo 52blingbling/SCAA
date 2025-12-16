@@ -5,18 +5,14 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <!-- 绿色背景圆形 -->
-    <circle
-        android:cx="54"
-        android:cy="54"
-        android:r="50"
-        android:fillColor="#2E7D32" />
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M54,54 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" />
     
     <!-- 中央白色圆形 -->
-    <circle
-        android:cx="54"
-        android:cy="54"
-        android:r="38"
-        android:fillColor="#FFFFFF" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,54 m-38,0 a38,38 0 1,1 76,0 a38,38 0 1,1 -76,0" />
     
     <!-- 农业元素：水滴和叶子 -->
     <!-- 水滴 -->
@@ -35,77 +31,77 @@
     <!-- 扫码元素：二维码 -->
     <!-- 二维码外框 -->
     <rect
-        android:x="32"
-        android:y="42"
         android:width="44"
         android:height="44"
+        android:x="32"
+        android:y="42"
         android:fillColor="#2E7D32" />
     <!-- 二维码内部图案 -->
     <!-- 左上角方块 -->
     <rect
-        android:x="38"
-        android:y="48"
         android:width="8"
         android:height="8"
+        android:x="38"
+        android:y="48"
         android:fillColor="#FFFFFF" />
     <!-- 右上角方块 -->
     <rect
-        android:x="62"
-        android:y="48"
         android:width="8"
         android:height="8"
+        android:x="62"
+        android:y="48"
         android:fillColor="#FFFFFF" />
     <!-- 左下角方块 -->
     <rect
-        android:x="38"
-        android:y="72"
         android:width="8"
         android:height="8"
+        android:x="38"
+        android:y="72"
         android:fillColor="#FFFFFF" />
     <!-- 右下角方块 -->
     <rect
-        android:x="62"
-        android:y="72"
         android:width="8"
         android:height="8"
+        android:x="62"
+        android:y="72"
         android:fillColor="#FFFFFF" />
     <!-- 中间方块 -->
     <rect
-        android:x="50"
-        android:y="60"
         android:width="8"
         android:height="8"
+        android:x="50"
+        android:y="60"
         android:fillColor="#FFFFFF" />
     <!-- 额外的二维码小点 -->
     <rect
+        android:width="4"
+        android:height="4"
         android:x="38"
         android:y="60"
-        android:width="4"
-        android:height="4"
         android:fillColor="#FFFFFF" />
     <rect
+        android:width="4"
+        android:height="4"
         android:x="66"
         android:y="60"
-        android:width="4"
-        android:height="4"
         android:fillColor="#FFFFFF" />
     <rect
+        android:width="4"
+        android:height="4"
         android:x="50"
         android:y="48"
-        android:width="4"
-        android:height="4"
         android:fillColor="#FFFFFF" />
     <rect
-        android:x="50"
-        android:y="76"
         android:width="4"
         android:height="4"
+        android:x="50"
+        android:y="76"
         android:fillColor="#FFFFFF" />
     
     <!-- 激活元素：勾选标记 -->
     <path
-        android:fillColor="#FFFFFF"
         android:strokeWidth="2"
         android:strokeColor="#2E7D32"
-        android:pathData="M38,52 L48,62 L70,40" />
+        android:pathData="M38,52 L48,62 L70,40"
+        android:fillColor="none" />
 </vector>
