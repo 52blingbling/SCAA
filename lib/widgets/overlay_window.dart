@@ -316,6 +316,24 @@ class _OverlayWindowState extends State<OverlayWindow> {
                                               'sequence': sequence,
                                               'content': content,
                                             });
+                                            
+                                            // 直接在悬浮窗中执行复制操作，不依赖主应用
+                                            try {
+                                              await Clipboard.setData(
+                                                ClipboardData(text: content),
+                                              );
+                                              print('Overlay copy success: $content');
+                                            } catch (e) {
+                                              print('Overlay copy error: $e');
+                                              // 尝试使用系统剪贴板服务
+                                              try {
+                                                const platform = MethodChannel('com.example.scan_assistant/clipboard');
+                                                await platform.invokeMethod('copyToClipboard', {'text': content});
+                                                print('Overlay copy via platform channel success');
+                                              } catch (platformError) {
+                                                print('Overlay copy via platform channel error: $platformError');
+                                              }
+                                            }
 
                                             Future.delayed(
                                               const Duration(
