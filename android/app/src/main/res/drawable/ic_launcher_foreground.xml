@@ -70,8 +70,8 @@
     
     <!-- 激活元素：勾选标记 -->
     <path
-        android:fillColor="none"
         android:strokeColor="#2E7D32"
         android:strokeWidth="2"
-        android:pathData="M38,52 L48,62 L70,40" />
+        android:fillColor="#2E7D32"
+        android:pathData="M38,52 L48,62 L70,40 Z" />
 </vector>
