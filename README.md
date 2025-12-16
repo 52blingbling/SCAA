@@ -17,12 +17,9 @@
 3. **文本记录管理**
    - 按扫描顺序记录文本内容
    - 支持长按删除记录项
+   - 支持复制扫描内容到剪贴板
 
-4. **快捷助手功能**
-   - 可拖动的悬浮窗
-   - 支持上一个、粘贴、下一个操作
-
-5. **跨应用粘贴**
+4. **跨应用粘贴**
    - 在其他应用中粘贴扫描内容
    - 支持序号切换
 
@@ -38,12 +35,9 @@ lib/
 │   ├── home_screen.dart     # 主界面
 │   ├── unit_screen.dart     # 单元详情界面
 │   └── scanner_screen.dart  # 扫码界面
-├── widgets/
-│   └── overlay_window.dart  # 快捷助手悬浮窗组件
 ├── services/
 │   ├── unit_service.dart    # 单元管理服务
 │   ├── audio_service.dart   # 音效服务
-│   ├── overlay_service.dart # 悬浮窗服务
 │   └── permission_service.dart # 权限服务
 └── utils/
 ```

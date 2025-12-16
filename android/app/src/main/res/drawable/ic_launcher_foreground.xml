@@ -4,50 +4,85 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- 绿色背景圆形 -->
+    
+    <!-- 背景圆形 - iOS蓝色渐变 -->
     <path
-        android:fillColor="#2E7D32"
+        android:fillColor="#007AFF"
         android:pathData="M54,54 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" />
     
-    <!-- 中央白色圆形 -->
+    <!-- 二维码主体 - 简化现代设计 -->
+    <!-- 外部方框 -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,54 m-38,0 a38,38 0 1,1 76,0 a38,38 0 1,1 -76,0" />
+        android:pathData="M28,28 L80,28 L80,80 L28,80 Z" />
     
-    <!-- 农业元素：水滴和叶子 -->
-    <!-- 水滴 -->
+    <!-- 左上角定位标记 -->
     <path
-        android:fillColor="#1976D2"
-        android:pathData="M54,20 C48,20 43,25 43,31 C43,37 48,42 54,42 C60,42 65,37 65,31 C65,25 60,20 54,20 Z" />
-    <!-- 叶子1 -->
+        android:fillColor="#007AFF"
+        android:pathData="M32,32 L44,32 L44,44 L32,44 Z" />
     <path
-        android:fillColor="#388E3C"
-        android:pathData="M40,28 C45,25 50,28 50,33 L45,40 C40,37 35,34 40,28 Z" />
-    <!-- 叶子2 -->
-    <path
-        android:fillColor="#388E3C"
-        android:pathData="M68,28 C63,25 58,28 58,33 L63,40 C68,37 73,34 68,28 Z" />
+        android:fillColor="#FFFFFF"
+        android:pathData="M36,36 L40,36 L40,40 L36,40 Z" />
     
-    <!-- 扫码元素：二维码 -->
-    <!-- 二维码外框 -->
+    <!-- 右上角定位标记 -->
     <path
-        android:fillColor="#2E7D32"
-        android:pathData="M32,42 L76,42 L76,86 L32,86 Z" />
-    <!-- 二维码内部图案 -->
-    <!-- 左上角方块 -->
+        android:fillColor="#007AFF"
+        android:pathData="M64,32 L76,32 L76,44 L64,44 Z" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M38,48 L46,48 L46,56 L38,56 Z" />
-    <!-- 右上角方块 -->
+        android:pathData="M68,36 L72,36 L72,40 L68,40 Z" />
+    
+    <!-- 左下角定位标记 -->
+    <path
+        android:fillColor="#007AFF"
+        android:pathData="M32,64 L44,64 L44,76 L32,76 Z" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M62,48 L70,48 L70,56 L62,56 Z" />
-    <!-- 左下角方块 -->
+        android:pathData="M36,68 L40,68 L40,72 L36,72 Z" />
+    
+    <!-- 中心数据区域 - 现代网格设计 -->
+    <!-- 第一排 -->
+    <path
+        android:fillColor="#007AFF"
+        android:pathData="M48,48 L52,48 L52,52 L48,52 Z" />
+    <path
+        android:fillColor="#007AFF"
+        android:pathData="M56,48 L60,48 L60,52 L56,52 Z" />
+    <path
+        android:fillColor="#007AFF"
+        android:pathData="M64,48 L68,48 L68,52 L64,52 Z" />
+    
+    <!-- 第二排 -->
+    <path
+        android:fillColor="#007AFF"
+        android:pathData="M48,56 L52,56 L52,60 L48,60 Z" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M38,72 L46,72 L46,80 L38,80 Z" />
-    <!-- 右下角方块 -->
+        android:pathData="M56,56 L60,56 L60,60 L56,60 Z" />
     <path
+        android:fillColor="#007AFF"
+        android:pathData="M64,56 L68,56 L68,60 L64,60 Z" />
+    
+    <!-- 第三排 -->
+    <path
+        android:fillColor="#007AFF"
+        android:pathData="M48,64 L52,64 L52,68 L48,68 Z" />
+    <path
+        android:fillColor="#007AFF"
+        android:pathData="M56,64 L60,64 L60,68 L56,68 Z" />
+    <path
+        android:fillColor="#007AFF"
+        android:pathData="M64,64 L68,64 L68,68 L64,68 Z" />
+    
+    <!-- 扫描光效 - 动态感 -->
+    <!-- 右侧光线 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M76,28 L80,28 L80,32 L76,32 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M76,76 L80,76 L80,80 L76,80 Z" />
+</vector>
         android:fillColor="#FFFFFF"
         android:pathData="M62,72 L70,72 L70,80 L62,80 Z" />
     <!-- 中间方块 -->

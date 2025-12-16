@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/unit_service.dart';
 import 'screens/home_screen.dart';
-import 'widgets/overlay_window.dart';
 
 void main() {
   runApp(
@@ -11,14 +10,6 @@ void main() {
       child: const MyApp(),
     ),
   );
-}
-
-@pragma("vm:entry-point")
-void overlayMain() {
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: OverlayWindow(),
-  ));
 }
 
 class MyApp extends StatelessWidget {

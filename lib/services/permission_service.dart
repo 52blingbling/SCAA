@@ -46,28 +46,6 @@ class PermissionService {
     return status == ph.PermissionStatus.granted;
   }
 
-  // 请求悬浮窗权限（Android）
-  static Future<bool> requestOverlayPermission(BuildContext context) async {
-    final status = await ph.Permission.systemAlertWindow.request();
-    if (status != ph.PermissionStatus.granted) {
-      if (context.mounted) {
-        _showPermissionDeniedDialog(
-          context,
-          '悬浮窗权限被拒绝',
-          '应用需要悬浮窗权限才能显示快捷助手，请在设置中开启悬浮窗权限。',
-        );
-      }
-      return false;
-    }
-    return true;
-  }
-
-  // 检查悬浮窗权限
-  static Future<bool> checkOverlayPermission() async {
-    final status = await ph.Permission.systemAlertWindow.status;
-    return status == ph.PermissionStatus.granted;
-  }
-
   // 打开应用设置页面
   static Future<void> openAppSettings() async {
     await ph.openAppSettings();

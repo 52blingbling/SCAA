@@ -4,9 +4,6 @@ import '../services/unit_service.dart';
 import '../services/permission_service.dart';
 import '../models/unit.dart';
 import 'scanner_screen.dart';
-import 'package:flutter_overlay_window/flutter_overlay_window.dart';
-import '../services/overlay_service.dart';
-import 'dart:async';
 import 'package:flutter/services.dart';
 
 class UnitScreen extends StatefulWidget {
@@ -19,81 +16,11 @@ class UnitScreen extends StatefulWidget {
 }
 
 class _UnitScreenState extends State<UnitScreen> {
-  bool _showFloatingHelper = false;
   int _currentRecordIndex = 1;
-  bool _overlayPermissionGranted = false;
-  StreamSubscription? _overlaySub;
-  int _currentPos = 0;
-  Timer? _overlayActiveTimer;
 
   @override
   void initState() {
     super.initState();
-    _checkOverlayPermission();
-    // Use the broadcast stream from UnitService instead of direct listener
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final unitService = Provider.of<UnitService>(context, listen: false);
-      
-      _overlaySub = unitService.overlayStream.listen((event) {
-        if (!mounted) return;
-        final unit = unitService.getUnitById(widget.unitId);
-        if (unit == null) return;
-        if (event is Map) {
-          final m = Map<String, dynamic>.from(event);
-          final action = m['action'];
-          if (action == 'prev') {
-            setState(() {
-              if (_currentPos > 0) _currentPos -= 1;
-            });
-          } else if (action == 'next') {
-            setState(() {
-              if (_currentPos < unit.scanRecords.length - 1) _currentPos += 1;
-            });
-          } else if (action == 'save_position') {
-            OverlayService.savePosition();
-          } else if (action == 'closed') {
-            setState(() {
-              _showFloatingHelper = false;
-            });
-          } else if (action == 'copied') {
-            // 处理悬浮窗复制事件，实现与文本栏复制按钮相同的功能
-            final content = m['content'] as String?;
-            if (content != null) {
-              Clipboard.setData(ClipboardData(text: content));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('复制成功'),
-                  duration: Duration(milliseconds: 1000),
-                ),
-              );
-            }
-          }
-          if (unit.scanRecords.isEmpty) return;
-          _currentRecordIndex = unit.scanRecords[_currentPos].index;
-          final currentContent = unit.scanRecords[_currentPos].content;
-          OverlayService.sendData({
-            'unit_name': unit.name,
-            'sequence': unit.scanRecords[_currentPos].index,
-            'content': currentContent,
-          });
-        }
-      });
-    });
-  }
-
-  Future<void> _checkOverlayPermission() async {
-    final granted = await PermissionService.checkOverlayPermission();
-    setState(() {
-      _overlayPermissionGranted = granted;
-    });
-  }
-
-  Future<void> _requestOverlayPermission() async {
-    final granted = await PermissionService.requestOverlayPermission(context);
-    setState(() {
-      _overlayPermissionGranted = granted;
-    });
   }
 
   @override
@@ -273,96 +200,26 @@ class _UnitScreenState extends State<UnitScreen> {
                     ),
                   ],
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ScannerScreen(unitId: widget.unitId),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.qr_code_scanner_rounded),
-                        label: const Text('扫码'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: const Color(0xFF007AFF),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ScannerScreen(unitId: widget.unitId),
                       ),
+                    );
+                  },
+                  icon: const Icon(Icons.qr_code_scanner_rounded),
+                  label: const Text('扫码'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: const Color(0xFF007AFF),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _overlayPermissionGranted
-                            ? () {
-                                setState(() {
-                                  _showFloatingHelper = !_showFloatingHelper;
-                                });
-                                if (_showFloatingHelper) {
-                                  _currentPos = 0;
-                                  _currentRecordIndex = unit.scanRecords.isNotEmpty
-                                      ? unit.scanRecords[_currentPos].index
-                                      : 1;
-                                  OverlayService.showOverlay().then((_) {
-                                    if (unit.scanRecords.isEmpty) return;
-                                    final currentContent = unit.scanRecords[_currentPos].content;
-                                    OverlayService.sendData({
-                                      'unit_name': unit.name,
-                                      'sequence': unit.scanRecords[_currentPos].index,
-                                      'content': currentContent,
-                                      'records': unit.scanRecords
-                                          .map((r) => {
-                                                'index': r.index,
-                                                'content': r.content,
-                                              })
-                                          .toList(),
-                                    });
-                                  });
-                                  _overlayActiveTimer?.cancel();
-                                  _overlayActiveTimer = Timer.periodic(const Duration(milliseconds: 800), (t) async {
-                                    final active = await OverlayService.isOverlayVisible();
-                                    if (!active && mounted) {
-                                      setState(() {
-                                        _showFloatingHelper = false;
-                                      });
-                                      t.cancel();
-                                    }
-                                  });
-                                } else {
-                                  OverlayService.hideOverlay();
-                                  _overlayActiveTimer?.cancel();
-                                }
-                              }
-                            : _requestOverlayPermission,
-                        icon: const Icon(Icons.view_agenda_outlined),
-                        label: const Text('助手'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: _showFloatingHelper 
-                            ? Colors.orange 
-                            : Colors.white,
-                          foregroundColor: _showFloatingHelper 
-                            ? Colors.white 
-                            : Colors.black87,
-                          elevation: 0,
-                          side: _showFloatingHelper 
-                            ? BorderSide.none 
-                            : BorderSide(color: Colors.grey[300]!),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -379,8 +236,6 @@ class _UnitScreenState extends State<UnitScreen> {
 
   @override
   void dispose() {
-    _overlaySub?.cancel();
-    _overlayActiveTimer?.cancel();
     super.dispose();
   }
 }

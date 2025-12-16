@@ -6,7 +6,6 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import '../models/unit.dart';
 import '../models/scan_record.dart';
-import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
 // 扩展List类，添加firstWhereOrNull方法（兼容旧Dart版本）
 extension ListExtension<T> on List<T> {
@@ -21,36 +20,12 @@ extension ListExtension<T> on List<T> {
 class UnitService extends ChangeNotifier {
   List<Unit> _units = [];
   bool _isLoading = true;
-  final StreamController<dynamic> _overlayEventController = StreamController<dynamic>.broadcast();
-  StreamSubscription? _overlaySubscription;
 
   List<Unit> get units => _units;
   bool get isLoading => _isLoading;
-  Stream<dynamic> get overlayStream => _overlayEventController.stream;
 
   UnitService() {
     loadUnits();
-    _initOverlayListener();
-  }
-
-  void _initOverlayListener() {
-    try {
-      _overlaySubscription = FlutterOverlayWindow.overlayListener.listen((event) {
-        // 只传递事件，不执行复制操作，复制操作由unit_screen.dart处理
-        _overlayEventController.add(event);
-      }, onError: (e) {
-        developer.log('Overlay listener error: $e');
-      });
-    } catch (e) {
-      developer.log('Failed to initialize overlay listener: $e');
-    }
-  }
-
-  @override
-  void dispose() {
-    _overlaySubscription?.cancel();
-    _overlayEventController.close();
-    super.dispose();
   }
 
   // 加载所有单元
