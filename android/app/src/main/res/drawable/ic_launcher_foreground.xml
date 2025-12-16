@@ -30,78 +30,48 @@
     
     <!-- 扫码元素：二维码 -->
     <!-- 二维码外框 -->
-    <rect
-        android:width="44"
-        android:height="44"
-        android:x="32"
-        android:y="42"
-        android:fillColor="#2E7D32" />
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M32,42 L76,42 L76,86 L32,86 Z" />
     <!-- 二维码内部图案 -->
     <!-- 左上角方块 -->
-    <rect
-        android:width="8"
-        android:height="8"
-        android:x="38"
-        android:y="48"
-        android:fillColor="#FFFFFF" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,48 L46,48 L46,56 L38,56 Z" />
     <!-- 右上角方块 -->
-    <rect
-        android:width="8"
-        android:height="8"
-        android:x="62"
-        android:y="48"
-        android:fillColor="#FFFFFF" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M62,48 L70,48 L70,56 L62,56 Z" />
     <!-- 左下角方块 -->
-    <rect
-        android:width="8"
-        android:height="8"
-        android:x="38"
-        android:y="72"
-        android:fillColor="#FFFFFF" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,72 L46,72 L46,80 L38,80 Z" />
     <!-- 右下角方块 -->
-    <rect
-        android:width="8"
-        android:height="8"
-        android:x="62"
-        android:y="72"
-        android:fillColor="#FFFFFF" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M62,72 L70,72 L70,80 L62,80 Z" />
     <!-- 中间方块 -->
-    <rect
-        android:width="8"
-        android:height="8"
-        android:x="50"
-        android:y="60"
-        android:fillColor="#FFFFFF" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M50,60 L58,60 L58,68 L50,68 Z" />
     <!-- 额外的二维码小点 -->
-    <rect
-        android:width="4"
-        android:height="4"
-        android:x="38"
-        android:y="60"
-        android:fillColor="#FFFFFF" />
-    <rect
-        android:width="4"
-        android:height="4"
-        android:x="66"
-        android:y="60"
-        android:fillColor="#FFFFFF" />
-    <rect
-        android:width="4"
-        android:height="4"
-        android:x="50"
-        android:y="48"
-        android:fillColor="#FFFFFF" />
-    <rect
-        android:width="4"
-        android:height="4"
-        android:x="50"
-        android:y="76"
-        android:fillColor="#FFFFFF" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,60 L42,60 L42,64 L38,64 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M66,60 L70,60 L70,64 L66,64 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M50,48 L54,48 L54,52 L50,52 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M50,76 L54,76 L54,80 L50,80 Z" />
     
     <!-- 激活元素：勾选标记 -->
     <path
-        android:strokeWidth="2"
+        android:fillColor="none"
         android:strokeColor="#2E7D32"
-        android:pathData="M38,52 L48,62 L70,40"
-        android:fillColor="none" />
+        android:strokeWidth="2"
+        android:pathData="M38,52 L48,62 L70,40" />
 </vector>
