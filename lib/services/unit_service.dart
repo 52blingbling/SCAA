@@ -7,7 +7,7 @@ import 'dart:developer' as developer;
 import '../models/unit.dart';
 import '../models/scan_record.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
-import 'notification_service';
+import './notification_service.dart';
 
 // 扩展List类，添加firstWhereOrNull方法（兼容旧Dart版本）
 extension ListExtension<T> on List<T> {
