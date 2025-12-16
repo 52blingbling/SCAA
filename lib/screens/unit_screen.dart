@@ -34,40 +34,44 @@ class _UnitScreenState extends State<UnitScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final unitService = Provider.of<UnitService>(context, listen: false);
+      
+      // 切换到当前单元
+      unitService.switchUnit(widget.unitId);
+      
       _overlaySub = unitService.overlayStream.listen((event) {
         if (!mounted) return;
         final unit = unitService.getUnitById(widget.unitId);
         if (unit == null) return;
         if (event is Map) {
-            final m = Map<String, dynamic>.from(event);
-            final action = m['action'];
-            if (action == 'prev') {
-              setState(() {
-                if (_currentPos > 0) _currentPos -= 1;
-              });
-            } else if (action == 'next') {
-              setState(() {
-                if (_currentPos < unit.scanRecords.length - 1) _currentPos += 1;
-              });
-            } else if (action == 'save_position') {
-              OverlayService.savePosition();
-            } else if (action == 'closed') {
-              setState(() {
-                _showFloatingHelper = false;
-              });
-            } else if (action == 'copied') {
-              // 处理悬浮窗复制事件，实现与文本栏复制按钮相同的功能
-              final content = m['content'] as String?;
-              if (content != null) {
-                Clipboard.setData(ClipboardData(text: content));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('复制成功'),
-                    duration: Duration(milliseconds: 1000),
-                  ),
-                );
-              }
+          final m = Map<String, dynamic>.from(event);
+          final action = m['action'];
+          if (action == 'prev') {
+            setState(() {
+              if (_currentPos > 0) _currentPos -= 1;
+            });
+          } else if (action == 'next') {
+            setState(() {
+              if (_currentPos < unit.scanRecords.length - 1) _currentPos += 1;
+            });
+          } else if (action == 'save_position') {
+            OverlayService.savePosition();
+          } else if (action == 'closed') {
+            setState(() {
+              _showFloatingHelper = false;
+            });
+          } else if (action == 'copied') {
+            // 处理悬浮窗复制事件，实现与文本栏复制按钮相同的功能
+            final content = m['content'] as String?;
+            if (content != null) {
+              Clipboard.setData(ClipboardData(text: content));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('复制成功'),
+                  duration: Duration(milliseconds: 1000),
+                ),
+              );
             }
+          }
           if (unit.scanRecords.isEmpty) return;
           _currentRecordIndex = unit.scanRecords[_currentPos].index;
           final currentContent = unit.scanRecords[_currentPos].content;
