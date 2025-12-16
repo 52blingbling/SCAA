@@ -7,7 +7,6 @@ import 'dart:developer' as developer;
 import '../models/unit.dart';
 import '../models/scan_record.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
-import './notification_service.dart';
 
 // 扩展List类，添加firstWhereOrNull方法（兼容旧Dart版本）
 extension ListExtension<T> on List<T> {
@@ -24,126 +23,20 @@ class UnitService extends ChangeNotifier {
   bool _isLoading = true;
   final StreamController<dynamic> _overlayEventController = StreamController<dynamic>.broadcast();
   StreamSubscription? _overlaySubscription;
-  
-  // 当前单元和位置管理
-  String? _currentUnitId;
-  int _currentPos = 0;
-  
-  // 通知服务实例
-  final NotificationService _notificationService = NotificationService();
 
   List<Unit> get units => _units;
   bool get isLoading => _isLoading;
   Stream<dynamic> get overlayStream => _overlayEventController.stream;
-  String? get currentUnitId => _currentUnitId;
-  int get currentPos => _currentPos;
 
   UnitService() {
     loadUnits();
     _initOverlayListener();
-    _initNotificationService();
-  }
-  
-  // 初始化通知服务
-  void _initNotificationService() async {
-    await _notificationService.initialize();
-  }
-  
-  // 获取当前单元
-  Unit? getCurrentUnit() {
-    if (_currentUnitId == null) return null;
-    return _units.firstWhereOrNull((unit) => unit.id == _currentUnitId);
-  }
-  
-  // 切换单元
-  void switchUnit(String unitId) {
-    _currentUnitId = unitId;
-    _currentPos = 0;
-    notifyListeners();
-    _updateNotification();
-  }
-  
-  // 上一条记录
-  void goToPreviousRecord() {
-    final currentUnit = getCurrentUnit();
-    if (currentUnit == null || currentUnit.scanRecords.isEmpty) return;
-    
-    if (_currentPos > 0) {
-      _currentPos--;
-      notifyListeners();
-      _updateNotification();
-      _notifyOverlay();
-    }
-  }
-  
-  // 下一条记录
-  void goToNextRecord() {
-    final currentUnit = getCurrentUnit();
-    if (currentUnit == null || currentUnit.scanRecords.isEmpty) return;
-    
-    if (_currentPos < currentUnit.scanRecords.length - 1) {
-      _currentPos++;
-      notifyListeners();
-      _updateNotification();
-      _notifyOverlay();
-    }
-  }
-  
-  // 复制当前内容到剪贴板
-  Future<void> copyCurrentContent() async {
-    final currentUnit = getCurrentUnit();
-    if (currentUnit == null || currentUnit.scanRecords.isEmpty) return;
-    
-    final currentRecord = currentUnit.scanRecords[_currentPos];
-    await Clipboard.setData(ClipboardData(text: currentRecord.content));
-  }
-  
-  // 更新通知
-  void _updateNotification() {
-    final currentUnit = getCurrentUnit();
-    if (currentUnit == null) return;
-    
-    if (currentUnit.scanRecords.isNotEmpty) {
-      final currentRecord = currentUnit.scanRecords[_currentPos];
-      _notificationService.updateNotification(
-        unitName: currentUnit.name,
-        content: currentRecord.content,
-        sequence: currentRecord.index,
-      );
-    }
-  }
-  
-  // 通知悬浮窗
-  void _notifyOverlay() {
-    final currentUnit = getCurrentUnit();
-    if (currentUnit == null) return;
-    
-    if (currentUnit.scanRecords.isNotEmpty) {
-      final currentRecord = currentUnit.scanRecords[_currentPos];
-      FlutterOverlayWindow.shareData({
-        'unit_name': currentUnit.name,
-        'sequence': currentRecord.index,
-        'content': currentRecord.content,
-      });
-    }
   }
 
   void _initOverlayListener() {
     try {
       _overlaySubscription = FlutterOverlayWindow.overlayListener.listen((event) {
-        if (event is Map) {
-          final m = Map<String, dynamic>.from(event);
-          final action = m['action'];
-          
-          // 处理悬浮窗操作
-          if (action == 'prev') {
-            goToPreviousRecord();
-          } else if (action == 'next') {
-            goToNextRecord();
-          } else if (action == 'copied') {
-            copyCurrentContent();
-          }
-        }
+        // 只传递事件，不执行复制操作，复制操作由unit_screen.dart处理
         _overlayEventController.add(event);
       }, onError: (e) {
         developer.log('Overlay listener error: $e');
@@ -169,19 +62,12 @@ class UnitService extends ChangeNotifier {
       final unitsJson = prefs.getString('units') ?? '[]';
       final List<dynamic> unitsData = json.decode(unitsJson);
       _units = unitsData.map((data) => Unit.fromMap(data)).toList();
-      
-      // 如果有单元，设置第一个为当前单元
-      if (_units.isNotEmpty && _currentUnitId == null) {
-        _currentUnitId = _units.first.id;
-        _currentPos = 0;
-      }
     } catch (_) {
       _units = [];
       await prefs.remove('units');
     } finally {
       _isLoading = false;
       notifyListeners();
-      _updateNotification();
     }
   }
 
@@ -246,13 +132,6 @@ class UnitService extends ChangeNotifier {
       
       _units[unitIndex] = updatedUnit;
       await saveUnits();
-      
-      // 如果当前单元是添加记录的单元，则更新当前位置并通知
-      if (_currentUnitId == unitId) {
-        _currentPos = updatedUnit.scanRecords.length - 1;
-        notifyListeners();
-        _updateNotification();
-      }
     }
   }
 

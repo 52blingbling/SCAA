@@ -35,9 +35,6 @@ class _UnitScreenState extends State<UnitScreen> {
       if (!mounted) return;
       final unitService = Provider.of<UnitService>(context, listen: false);
       
-      // 切换到当前单元
-      unitService.switchUnit(widget.unitId);
-      
       _overlaySub = unitService.overlayStream.listen((event) {
         if (!mounted) return;
         final unit = unitService.getUnitById(widget.unitId);
