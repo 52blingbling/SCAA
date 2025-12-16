@@ -26,6 +26,9 @@ class _OverlayWindowState extends State<OverlayWindow> {
   double _overlayX = 0;
   double _overlayY = 0;
   bool _hasInitialPosition = false;
+  Offset? _dragStartFinger;
+  double _dragStartX = 0;
+  double _dragStartY = 0;
 
   @override
   void initState() {
@@ -123,11 +126,22 @@ class _OverlayWindowState extends State<OverlayWindow> {
     }
   }
 
-  void _onDragUpdate(DragUpdateDetails details) {
+  void _onDragStart(DragStartDetails details) {
     if (!_hasInitialPosition) return;
-    _overlayX += details.delta.dx;
-    _overlayY += details.delta.dy;
-    FlutterOverlayWindow.moveOverlay(OverlayPosition(_overlayX, _overlayY));
+    _dragStartFinger = details.globalPosition;
+    _dragStartX = _overlayX;
+    _dragStartY = _overlayY;
+  }
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    if (!_hasInitialPosition || _dragStartFinger == null) return;
+    final dx = details.globalPosition.dx - _dragStartFinger!.dx;
+    final dy = details.globalPosition.dy - _dragStartFinger!.dy;
+    final newX = _dragStartX + dx;
+    final newY = _dragStartY + dy;
+    _overlayX = newX;
+    _overlayY = newY;
+    FlutterOverlayWindow.moveOverlay(OverlayPosition(newX, newY));
   }
 
   // 预计算尺寸逻辑
@@ -218,6 +232,7 @@ class _OverlayWindowState extends State<OverlayWindow> {
         children: [
           Center(
             child: GestureDetector(
+              onPanStart: _onDragStart,
               onPanUpdate: _onDragUpdate,
               child: Container(
                 key: _containerKey,
@@ -339,28 +354,25 @@ class _OverlayWindowState extends State<OverlayWindow> {
                                       Expanded(
                                         child: _OverlayButton(
                                           onTap: () async {
+                                            HapticFeedback.selectionClick();
+                                            setState(() {
+                                              _isCopied = true;
+                                              _showToast = true;
+                                              _toastMessage = '已复制';
+                                              _isToastError = false;
+                                            });
+                                            FlutterOverlayWindow.shareData({
+                                              'action': 'copied',
+                                              'sequence': sequence,
+                                              'content': content,
+                                            });
                                             try {
                                               await Clipboard.setData(
                                                 ClipboardData(text: content),
                                               );
-                                              HapticFeedback.selectionClick();
-                                              setState(() {
-                                                _isCopied = true;
-                                                _showToast = true;
-                                                _toastMessage = '已复制';
-                                                _isToastError = false;
-                                              });
-                                              FlutterOverlayWindow.shareData({
-                                                'action': 'copied',
-                                                'sequence': sequence,
-                                                'content': content,
-                                              });
                                             } catch (e) {
-                                              debugPrint(
-                                                  'Clipboard error: $e');
+                                              debugPrint('Clipboard error: $e');
                                               setState(() {
-                                                _isCopied = false;
-                                                _showToast = true;
                                                 _toastMessage = '复制失败';
                                                 _isToastError = true;
                                               });
@@ -385,6 +397,8 @@ class _OverlayWindowState extends State<OverlayWindow> {
                                                 if (mounted) {
                                                   setState(() {
                                                     _showToast = false;
+                                                    _isToastError = false;
+                                                    _toastMessage = '已复制';
                                                   });
                                                 }
                                               },
@@ -478,7 +492,7 @@ class _OverlayWindowState extends State<OverlayWindow> {
           ),
           if (_showToast)
             Positioned(
-              bottom: 80,
+              bottom: 12,
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
