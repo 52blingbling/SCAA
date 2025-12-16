@@ -7,6 +7,7 @@ import 'scanner_screen.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import '../services/overlay_service.dart';
 import 'dart:async';
+import 'package:flutter/services.dart';
 
 class UnitScreen extends StatefulWidget {
   final String unitId;
@@ -191,27 +192,57 @@ class _UnitScreenState extends State<UnitScreen> {
                                 ),
                               ],
                             ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.all(16),
-                              title: SelectableText(
-                                '${record.index}. ${record.content}',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  height: 1.4,
-                                ),
-                              ),
-                              subtitle: Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Text(
-                                  _formatDateTime(record.scannedAt),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[500],
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: SelectableText(
+                                          '${record.index}. ${record.content}',
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500,
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        onPressed: () async {
+                                          await Clipboard.setData(ClipboardData(text: record.content));
+                                          // Show a snackbar to indicate successful copy
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('复制成功'),
+                                                duration: Duration(milliseconds: 1000),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                        icon: const Icon(
+                                          Icons.copy_rounded,
+                                          color: Color(0xFF007AFF),
+                                          size: 20,
+                                        ),
+                                        tooltip: '复制内容',
+                                      ),
+                                    ],
                                   ),
-                                ),
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text(
+                                      _formatDateTime(record.scannedAt),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[500],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             ),
                           ),
                         );

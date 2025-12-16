@@ -23,12 +23,6 @@ class _OverlayWindowState extends State<OverlayWindow> {
   bool _isToastError = false;
 
   final GlobalKey _containerKey = GlobalKey();
-  double _overlayX = 0;
-  double _overlayY = 0;
-  bool _hasInitialPosition = false;
-  Offset? _dragStartFinger;
-  double _dragStartX = 0;
-  double _dragStartY = 0;
 
   @override
   void initState() {
@@ -37,8 +31,6 @@ class _OverlayWindowState extends State<OverlayWindow> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _updateOverlaySize();
     });
-
-    _initOverlayPosition();
 
     FlutterOverlayWindow.overlayListener.listen((event) async {
       if (event is Map) {
@@ -108,40 +100,6 @@ class _OverlayWindowState extends State<OverlayWindow> {
         }
       }
     });
-  }
-
-  Future<void> _initOverlayPosition() async {
-    try {
-      final pos = await FlutterOverlayWindow.getOverlayPosition();
-      if (pos != null) {
-        final dynamic d = pos;
-        final double ox = (d.x is double) ? d.x : (d.dx is double ? d.dx : 0.0);
-        final double oy = (d.y is double) ? d.y : (d.dy is double ? d.dy : 0.0);
-        _overlayX = ox;
-        _overlayY = oy;
-        _hasInitialPosition = true;
-      }
-    } catch (e) {
-      debugPrint('Error init overlay position: $e');
-    }
-  }
-
-  void _onDragStart(DragStartDetails details) {
-    if (!_hasInitialPosition) return;
-    _dragStartFinger = details.globalPosition;
-    _dragStartX = _overlayX;
-    _dragStartY = _overlayY;
-  }
-
-  void _onDragUpdate(DragUpdateDetails details) {
-    if (!_hasInitialPosition || _dragStartFinger == null) return;
-    final dx = details.globalPosition.dx - _dragStartFinger!.dx;
-    final dy = details.globalPosition.dy - _dragStartFinger!.dy;
-    final newX = _dragStartX + dx;
-    final newY = _dragStartY + dy;
-    _overlayX = newX;
-    _overlayY = newY;
-    FlutterOverlayWindow.moveOverlay(OverlayPosition(newX, newY));
   }
 
   // 预计算尺寸逻辑
@@ -231,24 +189,21 @@ class _OverlayWindowState extends State<OverlayWindow> {
         alignment: Alignment.center,
         children: [
           Center(
-            child: GestureDetector(
-              onPanStart: _onDragStart,
-              onPanUpdate: _onDragUpdate,
-              child: Container(
-                key: _containerKey,
-                width: 360,
-                margin: EdgeInsets.zero,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 10,
-                      spreadRadius: 2,
-                    )
-                  ],
-                ),
-                child: ClipRRect(
+            child: Container(
+              key: _containerKey,
+              width: 360,
+              margin: EdgeInsets.zero,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  )
+                ],
+              ),
+              child: ClipRRect(
                   borderRadius: BorderRadius.circular(24),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
@@ -342,6 +297,10 @@ class _OverlayWindowState extends State<OverlayWindow> {
                                                       '${parts[0]}-$sequence';
                                                 }
                                               }
+                                              _isCopied = false;
+                                              _showToast = false;
+                                              _isToastError = false;
+                                              _toastMessage = '已复制';
                                               _preCalculateAndResize();
                                             });
                                           }
@@ -446,6 +405,10 @@ class _OverlayWindowState extends State<OverlayWindow> {
                                                       '${parts[0]}-$sequence';
                                                 }
                                               }
+                                              _isCopied = false;
+                                              _showToast = false;
+                                              _isToastError = false;
+                                              _toastMessage = '已复制';
                                               _preCalculateAndResize();
                                             });
                                           }

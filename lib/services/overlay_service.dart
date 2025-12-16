@@ -29,7 +29,7 @@ class OverlayService {
       final y = prefs.getInt('overlay_y');
       if (x != null && y != null) {
         await FlutterOverlayWindow.showOverlay(
-          enableDrag: false,
+          enableDrag: true,
           flag: OverlayFlag.defaultFlag,
           positionGravity: PositionGravity.none,
           overlayTitle: '快捷助手已开启',
@@ -40,7 +40,7 @@ class OverlayService {
         );
       } else {
         await FlutterOverlayWindow.showOverlay(
-          enableDrag: false,
+          enableDrag: true,
           flag: OverlayFlag.defaultFlag,
           positionGravity: PositionGravity.none,
           overlayTitle: '快捷助手已开启',
