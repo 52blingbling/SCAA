@@ -18,9 +18,6 @@ class _OverlayWindowState extends State<OverlayWindow> {
   List<Map<String, dynamic>> records = [];
   int currentPos = 0;
   bool _isCopied = false;
-  bool _showToast = false;
-  String _toastMessage = '已复制';
-  bool _isToastError = false;
 
   final GlobalKey _containerKey = GlobalKey();
 
@@ -298,9 +295,6 @@ class _OverlayWindowState extends State<OverlayWindow> {
                                                 }
                                               }
                                               _isCopied = false;
-                                              _showToast = false;
-                                              _isToastError = false;
-                                              _toastMessage = '已复制';
                                               _preCalculateAndResize();
                                             });
                                           }
@@ -316,26 +310,12 @@ class _OverlayWindowState extends State<OverlayWindow> {
                                             HapticFeedback.selectionClick();
                                             setState(() {
                                               _isCopied = true;
-                                              _showToast = true;
-                                              _toastMessage = '已复制';
-                                              _isToastError = false;
                                             });
                                             FlutterOverlayWindow.shareData({
                                               'action': 'copied',
                                               'sequence': sequence,
                                               'content': content,
                                             });
-                                            try {
-                                              await Clipboard.setData(
-                                                ClipboardData(text: content),
-                                              );
-                                            } catch (e) {
-                                              debugPrint('Clipboard error: $e');
-                                              setState(() {
-                                                _toastMessage = '复制失败';
-                                                _isToastError = true;
-                                              });
-                                            }
 
                                             Future.delayed(
                                               const Duration(
@@ -346,18 +326,6 @@ class _OverlayWindowState extends State<OverlayWindow> {
                                                 if (mounted) {
                                                   setState(() {
                                                     _isCopied = false;
-                                                  });
-                                                }
-                                              },
-                                            );
-                                            Future.delayed(
-                                              const Duration(seconds: 2),
-                                              () {
-                                                if (mounted) {
-                                                  setState(() {
-                                                    _showToast = false;
-                                                    _isToastError = false;
-                                                    _toastMessage = '已复制';
                                                   });
                                                 }
                                               },
@@ -406,9 +374,6 @@ class _OverlayWindowState extends State<OverlayWindow> {
                                                 }
                                               }
                                               _isCopied = false;
-                                              _showToast = false;
-                                              _isToastError = false;
-                                              _toastMessage = '已复制';
                                               _preCalculateAndResize();
                                             });
                                           }
@@ -452,41 +417,7 @@ class _OverlayWindowState extends State<OverlayWindow> {
                 ),
               ),
             ),
-          _showToast ? Positioned(
-            bottom: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 10,
-              ),
-              decoration: BoxDecoration(
-                color: _isToastError
-                    ? Colors.red.withOpacity(0.9)
-                    : Colors.black.withOpacity(0.8),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Icon(
-                    _isToastError
-                        ? Icons.error_outline
-                        : Icons.check_circle,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _toastMessage,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ) : Container(),
+
         ],
       ),
     );

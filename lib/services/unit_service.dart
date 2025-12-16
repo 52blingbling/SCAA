@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:async';
+import 'dart:developer' as developer;
 import '../models/unit.dart';
 import '../models/scan_record.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
@@ -25,15 +26,13 @@ class UnitService extends ChangeNotifier {
   void _initOverlayListener() {
     try {
       _overlaySubscription = FlutterOverlayWindow.overlayListener.listen((event) {
-        if (event is Map && event['action'] == 'copied' && event['content'] is String) {
-          Clipboard.setData(ClipboardData(text: event['content']));
-        }
+        // 只传递事件，不执行复制操作，复制操作由unit_screen.dart处理
         _overlayEventController.add(event);
       }, onError: (e) {
-        debugPrint('Overlay listener error: $e');
+        developer.log('Overlay listener error: $e');
       });
     } catch (e) {
-      debugPrint('Failed to initialize overlay listener: $e');
+      developer.log('Failed to initialize overlay listener: $e');
     }
   }
 
