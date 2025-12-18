@@ -55,16 +55,34 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
 
   Future<void> _pickImageFromGallery() async {
     try {
+      setState(() => _isProcessing = true);
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 100,
-      // Gallery import removed: keep camera-only scanning to avoid native/AGP issues
-      
-      return rawValue ?? '';
+      );
+
+      if (pickedFile == null) {
+        setState(() => _isProcessing = false);
+        return;
+      }
+
+      final channel = MethodChannel('scan_assistant/native');
+      final String? decoded = await channel.invokeMethod('decodeImage', {'path': pickedFile.path});
+
+      if (decoded != null && decoded.isNotEmpty) {
+        _handleQRData(decoded);
+      } else {
+        setState(() {
+          _errorMessage = '未能识别图片中的二维码，请选择清晰的图片';
+          _isProcessing = false;
+        });
+      }
     } catch (e) {
-      print('二维码识别错误: $e');
-      return '';
+      setState(() {
+        _errorMessage = '读取图片失败: $e';
+        _isProcessing = false;
+      });
     }
   }
 

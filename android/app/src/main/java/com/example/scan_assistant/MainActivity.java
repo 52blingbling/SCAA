@@ -13,6 +13,13 @@ import android.util.Base64;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
+import android.graphics.Bitmap;
+import com.google.zxing.BinaryBitmap;
+import com.google.zxing.LuminanceSource;
+import com.google.zxing.MultiFormatReader;
+import com.google.zxing.Result;
+import com.google.zxing.common.HybridBinarizer;
+import com.google.zxing.RGBLuminanceSource;
 
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
@@ -32,10 +39,33 @@ public class MainActivity extends FlutterActivity {
 					String name = call.argument("name");
 					boolean ok = saveImageToGallery(base64, name);
 					result.success(ok);
+				} else if (call.method.equals("decodeImage")) {
+					String path = call.argument("path");
+					String decoded = decodeImageFile(path);
+					result.success(decoded);
 				} else {
 					result.notImplemented();
 				}
 			});
+	}
+
+	private String decodeImageFile(String path) {
+		try {
+			Bitmap bitmap = BitmapFactory.decodeFile(path);
+			if (bitmap == null) return null;
+			int width = bitmap.getWidth();
+			int height = bitmap.getHeight();
+			int[] pixels = new int[width * height];
+			bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
+
+			LuminanceSource source = new RGBLuminanceSource(width, height, pixels);
+			BinaryBitmap binaryBitmap = new BinaryBitmap(new HybridBinarizer(source));
+			Result result = new MultiFormatReader().decode(binaryBitmap);
+			return result == null ? null : result.getText();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
 	}
 
 	private boolean saveImageToGallery(String base64, String filename) {
