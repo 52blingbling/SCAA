@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:image/image.dart' as img;
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
-import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
+import 'package:zxing2/qrcode.dart';
+import 'package:image/image.dart' as img;
 import '../services/qr_service.dart';
 import '../models/unit.dart';
 
@@ -65,11 +65,8 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
       if (pickedFile != null) {
         setState(() => _isProcessing = true);
         
-        // 读取图片文件
-        final imageBytes = await File(pickedFile.path).readAsBytes();
-        
-        // 解码二维码
-        final qrData = await _decodeQRFromImage(imageBytes);
+        // 使用 mobile_scanner 的控制器来扫描静态图片
+        final qrData = await _scanQRFromFile(pickedFile.path);
         
         if (qrData != null) {
           _handleQRData(qrData);
@@ -89,37 +86,33 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
     }
   }
 
-  Future<String?> _decodeQRFromImage(Uint8List imageBytes) async {
+  Future<String?> _scanQRFromFile(String filePath) async {
     try {
-      final image = img.decodeImage(imageBytes);
-      if (image == null) return null;
-
-      // 使用 Google ML Kit 进行二维码识别
-      final inputImage = InputImage.fromBytes(
-        bytes: imageBytes,
-        metadata: InputImageMetadata(
-          size: Size(image.width.toDouble(), image.height.toDouble()),
-          rotation: InputImageRotation.rotation0deg,
-          format: InputImageFormat.nv21,
-          bytesPerRow: image.width,
-        ),
-      );
-
-      final barcodeScanner = BarcodeScanner();
-      final barcodes = await barcodeScanner.processImage(inputImage);
-
-      for (final barcode in barcodes) {
-        if (barcode.type == BarcodeType.qrCode && barcode.rawValue != null) {
-          await barcodeScanner.close();
-          return barcode.rawValue;
-        }
-      }
-
-      await barcodeScanner.close();
-      return null;
+      // 使用 zxing2 识别二维码
+      final imageFile = File(filePath);
+      final bytes = await imageFile.readAsBytes();
+      
+      final String qrData = await _decodeQRFromImage(bytes);
+      return qrData.isNotEmpty ? qrData : null;
     } catch (e) {
-      print('二维码解码错误: $e');
+      print('QR 扫描错误: $e');
       return null;
+    }
+  }
+
+  Future<String> _decodeQRFromImage(Uint8List imageBytes) async {
+    try {
+      // 使用 zxing2 进行二维码识别
+      final img.Image? image = img.decodeImage(imageBytes);
+      if (image == null) return '';
+      
+      final ZXingDecoder decoder = ZXingDecoder();
+      final String? rawValue = decoder.decodeImage(image);
+      
+      return rawValue ?? '';
+    } catch (e) {
+      print('二维码识别错误: $e');
+      return '';
     }
   }
 
@@ -142,11 +135,13 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
       } else {
         setState(() {
           _errorMessage = '无效的二维码格式';
+          _isProcessing = false;
         });
       }
     } catch (e) {
       setState(() {
         _errorMessage = '解析失败: $e';
+        _isProcessing = false;
       });
     }
   }
@@ -288,7 +283,8 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
                 ),
               )
             : const Icon(Icons.photo_library_rounded),
-        label: Text(_isProcessing ? '处理中...' : '从相册导入'),
+        label: const Text(_isProcessing ? '处理中...' : '从相册导入'),
+        backgroundColor: const Color(0xFF007AFF),
       ),
     );
   }
