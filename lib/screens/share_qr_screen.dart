@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:gallery_saver/gallery_saver.dart';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:flutter/services.dart';
 import '../models/unit.dart';
 import '../services/qr_service.dart';
 
@@ -113,20 +114,33 @@ class _ShareQRScreenState extends State<ShareQRScreen> {
       );
       
       if (byteData != null) {
-        // 将图片写入临时文件，再调用 gallery_saver 保存到相册
-        final tempDir = Directory.systemTemp;
-        final file = await File('${tempDir.path}/unit_${widget.unit.name}_qr.png')
-            .writeAsBytes(byteData.buffer.asUint8List());
+        final bytes = byteData.buffer.asUint8List();
+        final String base64Str = base64Encode(bytes);
 
-        final bool? success = await GallerySaver.saveImage(file.path, albumName: 'ScanAssistant');
+        try {
+          final channel = MethodChannel('scan_assistant/native');
+          final bool? ok = await channel.invokeMethod('saveImage', {
+            'bytes': base64Str,
+            'name': 'unit_${widget.unit.name}_qr.png',
+          });
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(success == true ? '保存成功' : '保存失败'),
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(ok == true ? '保存成功' : '保存失败'),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('保存失败: $e'),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
         }
       }
     } catch (e) {
