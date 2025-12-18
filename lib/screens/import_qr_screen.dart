@@ -5,8 +5,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
-import 'package:zxing2/qrcode.dart';
-import 'package:image/image.dart' as img;
+// image-from-gallery decoding removed to avoid native-decode dependency
 import '../services/qr_service.dart';
 import '../models/unit.dart';
 
@@ -60,54 +59,7 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
       final pickedFile = await picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 100,
-      );
-
-      if (pickedFile != null) {
-        setState(() => _isProcessing = true);
-        
-        // 使用 mobile_scanner 的控制器来扫描静态图片
-        final qrData = await _scanQRFromFile(pickedFile.path);
-        
-        if (qrData != null) {
-          _handleQRData(qrData);
-        } else {
-          setState(() {
-            _errorMessage = '未能识别二维码，请选择包含二维码的图片';
-          });
-        }
-        
-        setState(() => _isProcessing = false);
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = '读取图片失败: $e';
-        _isProcessing = false;
-      });
-    }
-  }
-
-  Future<String?> _scanQRFromFile(String filePath) async {
-    try {
-      // 使用 zxing2 识别二维码
-      final imageFile = File(filePath);
-      final bytes = await imageFile.readAsBytes();
-      
-      final String qrData = await _decodeQRFromImage(bytes);
-      return qrData.isNotEmpty ? qrData : null;
-    } catch (e) {
-      print('QR 扫描错误: $e');
-      return null;
-    }
-  }
-
-  Future<String> _decodeQRFromImage(Uint8List imageBytes) async {
-    try {
-      // 使用 zxing2 进行二维码识别
-      final img.Image? image = img.decodeImage(imageBytes);
-      if (image == null) return '';
-      
-      final ZXingDecoder decoder = ZXingDecoder();
-      final String? rawValue = decoder.decodeImage(image);
+      // Gallery import removed: keep camera-only scanning to avoid native/AGP issues
       
       return rawValue ?? '';
     } catch (e) {
@@ -272,7 +224,14 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
               ),
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _isProcessing ? null : _pickImageFromGallery,
+        onPressed: _isProcessing ? null : () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('请使用相机扫描二维码'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        },
         icon: _isProcessing
             ? const SizedBox(
                 width: 24,
@@ -283,8 +242,8 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
                 ),
               )
             : const Icon(Icons.photo_library_rounded),
-        label: const Text(_isProcessing ? '处理中...' : '从相册导入'),
-        backgroundColor: const Color(0xFF007AFF),
+        label: Text(_isProcessing ? '处理中...' : '使用相机扫描'),
+        backgroundColor: Colors.grey,
       ),
     );
   }

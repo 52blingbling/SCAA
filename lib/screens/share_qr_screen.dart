@@ -18,15 +18,15 @@ class ShareQRScreen extends StatefulWidget {
 }
 
 class _ShareQRScreenState extends State<ShareQRScreen> {
-  late GlobalKey<QrImageViewState> qrKey;
+  // no global key needed; render QR with QrPainter
   bool _isSaving = false;
   String? _qrData;
 
   @override
   void initState() {
     super.initState();
-    qrKey = GlobalKey<QrImageViewState>();
     _qrData = QRService.encodeUnit(widget.unit);
+    // init done
   }
 
   Future<void> _saveQRCode() async {
@@ -45,19 +45,19 @@ class _ShareQRScreenState extends State<ShareQRScreen> {
         Paint()..color = Colors.white,
       );
       
-      // 生成二维码图像
-      final qrImage = await QrImage(
+      // 使用 QrPainter 在画布上直接绘制二维码
+      final painter = QrPainter(
         data: _qrData!,
         version: QrVersions.auto,
-        size: 500,
-      ).toImage(context);
-      
-      // 绘制二维码（居中）
-      canvas.drawImage(
-        qrImage,
-        const Offset(50, 80),
-        Paint(),
+        gapless: true,
+        color: Colors.black,
+        embeddedImageStyle: null,
       );
+
+      canvas.save();
+      canvas.translate(50, 80);
+      painter.paint(canvas, const Size(500, 500));
+      canvas.restore();
       
       // 绘制单元名称标题
       final textPainter = TextPainter(
@@ -192,17 +192,18 @@ class _ShareQRScreenState extends State<ShareQRScreen> {
                       ],
                     ),
                     child: _qrData != null
-                        ? QrImage(
-                            key: qrKey,
-                            data: _qrData!,
-                            version: QrVersions.auto,
-                            size: 300,
-                            backgroundColor: Colors.white,
-                            errorStateBuilder: (context, error) {
-                              return Center(
-                                child: Text('数据过大: $error'),
-                              );
-                            },
+                        ? SizedBox(
+                            width: 300,
+                            height: 300,
+                            child: CustomPaint(
+                              painter: QrPainter(
+                                data: _qrData!,
+                                version: QrVersions.auto,
+                                gapless: true,
+                                color: Colors.black,
+                                embeddedImageStyle: null,
+                              ),
+                            ),
                           )
                         : const Center(
                             child: CircularProgressIndicator(),
