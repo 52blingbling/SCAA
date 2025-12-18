@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../services/unit_service.dart';
 import '../models/unit.dart';
 import 'unit_screen.dart';
+import 'share_qr_screen.dart';
+import 'import_qr_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -20,6 +22,11 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('单元管理'),
         actions: [
+          IconButton(
+            onPressed: () => _showImportDialog(context),
+            icon: const Icon(Icons.download_rounded, size: 28),
+            tooltip: '导入单元',
+          ),
           IconButton(
             onPressed: () => _showAddUnitDialog(context),
             icon: const Icon(Icons.add_circle_outline_rounded, size: 28),
@@ -80,6 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       );
                     },
+                    onLongPress: () => _showShareMenu(context, unit),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Row(
@@ -252,6 +260,64 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         );
       },
+    );
+  }
+
+  void _showShareMenu(BuildContext context, Unit unit) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.qr_code_2_rounded),
+                title: const Text('生成二维码'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ShareQRScreen(unit: unit),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit_rounded),
+                title: const Text('重命名'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showRenameDialog(context, Provider.of<UnitService>(context, listen: false), unit);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                title: const Text('删除', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showDeleteConfirmation(context, Provider.of<UnitService>(context, listen: false), unit);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showImportDialog(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ImportQRScreen(
+          onUnitImported: (unit) {
+            Provider.of<UnitService>(context, listen: false).addUnitFromImport(unit);
+          },
+        ),
+      ),
     );
   }
 

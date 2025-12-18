@@ -127,4 +127,16 @@ class UnitService extends ChangeNotifier {
       await saveUnits();
     }
   }
+
+  // 添加导入的单元
+  Future<void> addUnitFromImport(Unit importedUnit) async {
+    final newUnit = Unit(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: importedUnit.name,
+      createdAt: DateTime.now(),
+      scanRecords: importedUnit.scanRecords,
+    );
+    _units.add(newUnit);
+    await saveUnits();
+  }
 }
