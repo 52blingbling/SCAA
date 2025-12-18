@@ -107,12 +107,14 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
           _errorMessage = '无效的二维码格式';
           _isProcessing = false;
         });
+        HapticFeedback.vibrate();
       }
     } catch (e) {
       setState(() {
         _errorMessage = '解析失败: $e';
         _isProcessing = false;
       });
+      HapticFeedback.vibrate();
     }
   }
 
@@ -242,14 +244,7 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
               ),
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _isProcessing ? null : () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('请使用相机扫描二维码'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        },
+        onPressed: _isProcessing ? null : _pickImageFromGallery,
         icon: _isProcessing
             ? const SizedBox(
                 width: 24,
@@ -260,8 +255,8 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
                 ),
               )
             : const Icon(Icons.photo_library_rounded),
-        label: Text(_isProcessing ? '处理中...' : '使用相机扫描'),
-        backgroundColor: Colors.grey,
+        label: Text(_isProcessing ? '处理中...' : '从相册导入'),
+        backgroundColor: const Color(0xFF007AFF),
       ),
     );
   }

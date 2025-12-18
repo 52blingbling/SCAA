@@ -87,7 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       );
                     },
-                    onLongPress: () => _showShareMenu(context, unit),
+                    // 长按功能取消（改为在三点菜单中添加“分享”）
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Row(
@@ -129,7 +129,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             icon: Icon(Icons.more_horiz_rounded, color: Colors.grey[400]),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             onSelected: (value) {
-                              if (value == 'rename') {
+                              if (value == 'share') {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ShareQRScreen(unit: unit),
+                                  ),
+                                );
+                              } else if (value == 'rename') {
                                 _showRenameDialog(context, unitService, unit);
                               } else if (value == 'delete') {
                                 _showDeleteConfirmation(context, unitService, unit);
@@ -137,6 +144,16 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                             itemBuilder: (BuildContext context) {
                               return [
+                                const PopupMenuItem(
+                                  value: 'share',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.qr_code_2_rounded, size: 20),
+                                      SizedBox(width: 12),
+                                      Text('分享'),
+                                    ],
+                                  ),
+                                ),
                                 const PopupMenuItem(
                                   value: 'rename',
                                   child: Row(

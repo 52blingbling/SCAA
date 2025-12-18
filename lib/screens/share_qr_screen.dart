@@ -21,11 +21,30 @@ class _ShareQRScreenState extends State<ShareQRScreen> {
   // no global key needed; render QR with QrPainter
   bool _isSaving = false;
   String? _qrData;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _qrData = QRService.encodeUnit(widget.unit);
+    // 先检查是否能放入二维码容量
+    if (!QRService.canFitInQR(widget.unit.scanRecords)) {
+      _errorMessage = '生成失败：数据超出二维码最大容量，无法生成二维码。';
+      _qrData = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('生成失败'),
+            content: Text(_errorMessage!),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('知道了')),
+            ],
+          ),
+        );
+      });
+    } else {
+      _qrData = QRService.encodeUnit(widget.unit);
+    }
     // init done
   }
 
@@ -205,9 +224,17 @@ class _ShareQRScreenState extends State<ShareQRScreen> {
                               ),
                             ),
                           )
-                        : const Center(
-                            child: CircularProgressIndicator(),
-                          ),
+                        : (_errorMessage != null)
+                            ? Center(
+                                child: Text(
+                                  _errorMessage!,
+                                  style: const TextStyle(color: Colors.redAccent),
+                                  textAlign: TextAlign.center,
+                                ),
+                              )
+                            : const Center(
+                                child: CircularProgressIndicator(),
+                              ),
                   ),
                   const SizedBox(height: 24),
                   // 单元信息
@@ -290,13 +317,13 @@ class _ShareQRScreenState extends State<ShareQRScreen> {
               ),
             ),
           ),
-          // 底部按钮
+          // 底部按钮（外层白色卡片 + 内层蓝色按钮，文本居中）
           Container(
             padding: EdgeInsets.fromLTRB(
               16,
+              12,
               16,
-              16,
-              MediaQuery.of(context).padding.bottom + 16,
+              MediaQuery.of(context).padding.bottom + 12,
             ),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -308,23 +335,38 @@ class _ShareQRScreenState extends State<ShareQRScreen> {
                 ),
               ],
             ),
-            child: ElevatedButton.icon(
-              onPressed: _isSaving ? null : _saveQRCode,
-              icon: _isSaving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save_alt_rounded),
-              label: Text(_isSaving ? '保存中...' : '保存到相册'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: const Color(0xFF007AFF),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: (_isSaving || _qrData == null) ? null : _saveQRCode,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF007AFF),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Center(
+                          child: Text('保存到相册', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        ),
                 ),
               ),
             ),
