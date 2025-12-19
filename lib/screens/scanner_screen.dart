@@ -77,10 +77,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
                     fit: StackFit.expand,
                     children: [
                       MobileScanner(
-                        controller: _controller ??= MobileScannerController(
-                          detectionSpeed: DetectionSpeed.normal,
-                          detectionTimeoutMs: 300,
-                        ),
+                                        controller: _controller ??= MobileScannerController(
+                                          detectionSpeed: DetectionSpeed.normal,
+                                          detectionTimeoutMs: 1200,
+                                        ),
                         onDetect: _onDetect,
                       ),
                       LayoutBuilder(

@@ -147,9 +147,9 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
           ? Stack(
               children: [
                 MobileScanner(
-                  controller: _controller ??= MobileScannerController(
+                    controller: _controller ??= MobileScannerController(
                     detectionSpeed: DetectionSpeed.normal,
-                    detectionTimeoutMs: 300,
+                    detectionTimeoutMs: 1200,
                   ),
                   onDetect: _onDetect,
                 ),
@@ -282,21 +282,17 @@ class _ScannerOverlayPainter extends CustomPainter {
 
   @override
   void paint(ui.Canvas canvas, ui.Size size) {
-    // 先在新图层绘制半透明覆盖，再用 clear 挖空扫描区域，保证框内透明、框外半透明
     final overlayPaint = Paint()..color = const Color(0x88000000);
-    canvas.saveLayer(Offset.zero & size, Paint());
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), overlayPaint);
-    final clearPaint = Paint()
-      ..blendMode = BlendMode.clear
-      ..isAntiAlias = true;
-    canvas.drawRRect(hole, clearPaint);
-    canvas.restore();
+    final cutout = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..addRRect(hole);
+    canvas.drawPath(cutout, overlayPaint);
 
     final borderPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..isAntiAlias = true;
+      ..strokeWidth = 3;
     canvas.drawRRect(hole, borderPaint);
   }
 
