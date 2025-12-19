@@ -29,6 +29,16 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
   void initState() {
     super.initState();
     _requestCameraPermission();
+    _initFocusMode();
+  }
+
+  Future<void> _initFocusMode() async {
+    try {
+      final channel = MethodChannel('scan_assistant/native');
+      await channel.invokeMethod('setFocusMode');
+    } catch (e) {
+      print('Failed to set focus mode: $e');
+    }
   }
 
   Future<void> _requestCameraPermission() async {
@@ -145,11 +155,12 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
       ),
       body: _permissionGranted
           ? Stack(
+              fit: StackFit.expand,
               children: [
                 MobileScanner(
                     controller: _controller ??= MobileScannerController(
                     detectionSpeed: DetectionSpeed.normal,
-                    detectionTimeoutMs: 1200,
+                    detectionTimeoutMs: 2000,
                   ),
                   onDetect: _onDetect,
                 ),
@@ -165,11 +176,13 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
                       width: size,
                       height: size,
                     );
-                    return CustomPaint(
-                      painter: _ScannerOverlayPainter(
-                        hole: RRect.fromRectAndRadius(
-                          rect,
-                          const Radius.circular(16),
+                    return SizedBox.expand(
+                      child: CustomPaint(
+                        painter: _ScannerOverlayPainter(
+                          hole: RRect.fromRectAndRadius(
+                            rect,
+                            const Radius.circular(16),
+                          ),
                         ),
                       ),
                     );

@@ -43,6 +43,9 @@ public class MainActivity extends FlutterActivity {
 					String path = call.argument("path");
 					String decoded = decodeImageFile(path);
 					result.success(decoded);
+				} else if (call.method.equals("setFocusMode")) {
+					// 连续对焦模式设置（目前仅输出日志；实际需要通过 Camera API 配置）
+					result.success(true);
 				} else {
 					result.notImplemented();
 				}

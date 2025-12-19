@@ -29,6 +29,16 @@ class _ScannerScreenState extends State<ScannerScreen> {
   void initState() {
     super.initState();
     _requestCameraPermission();
+    _initFocusMode();
+  }
+
+  Future<void> _initFocusMode() async {
+    try {
+      final channel = MethodChannel('scan_assistant/native');
+      await channel.invokeMethod('setFocusMode');
+    } catch (e) {
+      print('Failed to set focus mode: $e');
+    }
   }
 
   @override
@@ -79,7 +89,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                       MobileScanner(
                                         controller: _controller ??= MobileScannerController(
                                           detectionSpeed: DetectionSpeed.normal,
-                                          detectionTimeoutMs: 1200,
+                                          detectionTimeoutMs: 2000,
                                         ),
                         onDetect: _onDetect,
                       ),
