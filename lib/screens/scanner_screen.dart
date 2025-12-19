@@ -89,7 +89,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                       MobileScanner(
                                         controller: _controller ??= MobileScannerController(
                                           detectionSpeed: DetectionSpeed.normal,
-                                          detectionTimeoutMs: 2000,
+                                          detectionTimeoutMs: 600,
                                         ),
                         onDetect: _onDetect,
                       ),
