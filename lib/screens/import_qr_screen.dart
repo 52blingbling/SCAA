@@ -282,17 +282,13 @@ class _ScannerOverlayPainter extends CustomPainter {
 
   @override
   void paint(ui.Canvas canvas, ui.Size size) {
-    // 绘制半透明覆盖层，然后用 clear 模式在扫描框处挖空，确保框外为灰色，框内透明
     final overlayPaint = Paint()..color = const Color(0x88000000);
+    final cutout = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..addRRect(hole);
+    canvas.drawPath(cutout, overlayPaint);
 
-    // 使用 saveLayer + clear 来挖空
-    canvas.saveLayer(Offset.zero & size, Paint());
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), overlayPaint);
-    final clearPaint = Paint()..blendMode = BlendMode.clear;
-    canvas.drawRRect(hole, clearPaint);
-    canvas.restore();
-
-    // 绘制扫描框边框
     final borderPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
