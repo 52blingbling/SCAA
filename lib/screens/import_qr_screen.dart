@@ -245,18 +245,25 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
             ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _isProcessing ? null : _pickImageFromGallery,
+        backgroundColor: Colors.white,
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: const Color(0xFF007AFF).withOpacity(0.15)),
+          borderRadius: BorderRadius.circular(12),
+        ),
         icon: _isProcessing
             ? const SizedBox(
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                  valueColor: AlwaysStoppedAnimation(Color(0xFF007AFF)),
                 ),
               )
-            : const Icon(Icons.photo_library_rounded),
-        label: Text(_isProcessing ? '处理中...' : '从相册导入'),
-        backgroundColor: const Color(0xFF007AFF),
+            : const Icon(Icons.photo_library_rounded, color: Color(0xFF007AFF)),
+        label: _isProcessing
+            ? const Text('处理中...', style: TextStyle(color: Color(0xFF007AFF)))
+            : const Text('从相册导入', style: TextStyle(color: Color(0xFF007AFF))),
       ),
     );
   }
@@ -275,14 +282,17 @@ class _ScannerOverlayPainter extends CustomPainter {
 
   @override
   void paint(ui.Canvas canvas, ui.Size size) {
+    // 绘制半透明覆盖层，然后用 clear 模式在扫描框处挖空，确保框外为灰色，框内透明
     final overlayPaint = Paint()..color = const Color(0x88000000);
-    final full = Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
-    final cutout = Path()
-      ..fillType = PathFillType.evenOdd
-      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..addRRect(hole);
-    canvas.drawPath(cutout, overlayPaint);
 
+    // 使用 saveLayer + clear 来挖空
+    canvas.saveLayer(Offset.zero & size, Paint());
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), overlayPaint);
+    final clearPaint = Paint()..blendMode = BlendMode.clear;
+    canvas.drawRRect(hole, clearPaint);
+    canvas.restore();
+
+    // 绘制扫描框边框
     final borderPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
