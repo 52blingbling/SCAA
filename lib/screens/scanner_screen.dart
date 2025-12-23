@@ -19,6 +19,7 @@ class ScannerScreen extends StatefulWidget {
 
 class _ScannerScreenState extends State<ScannerScreen> {
   MobileScannerController? _controller;
+  final MethodChannel _nativeChannel = const MethodChannel('scan_assistant/native');
   String? _resultCode;
   bool _permissionGranted = false;
   bool _scanSuccess = false;
@@ -83,16 +84,42 @@ class _ScannerScreenState extends State<ScannerScreen> {
               children: [
                 Expanded(
                   flex: 4,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      MobileScanner(
-                                        controller: _controller ??= MobileScannerController(
-                                          detectionSpeed: DetectionSpeed.normal,
-                                          detectionTimeoutMs: 600,
-                                        ),
-                        onDetect: _onDetect,
-                      ),
+                  child: LayoutBuilder(builder: (context, constraints) {
+                    return GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTapDown: (details) async {
+                        try {
+                          final dx = details.localPosition.dx / constraints.maxWidth;
+                          final dy = details.localPosition.dy / constraints.maxHeight;
+                          await _nativeChannel.invokeMethod('focusAt', {'x': dx, 'y': dy});
+                        } catch (e) {
+                          // ignore
+                        }
+                      },
+                      onVerticalDragUpdate: (details) async {
+                        try {
+                          // vertical drag: negative -> increase exposure, positive -> decrease
+                          final delta = -details.delta.dy / constraints.maxHeight;
+                          await _nativeChannel.invokeMethod('setExposure', {'delta': delta});
+                        } catch (e) {}
+                      },
+                      onScaleStart: (details) {},
+                      onScaleUpdate: (details) async {
+                        try {
+                          final scale = details.scale.clamp(0.5, 6.0);
+                          await _nativeChannel.invokeMethod('setZoom', {'scale': scale});
+                        } catch (e) {}
+                      },
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          MobileScanner(
+                            controller: _controller ??= MobileScannerController(
+                              detectionSpeed: DetectionSpeed.normal,
+                              detectionTimeoutMs: 600,
+                            ),
+                            onDetect: _onDetect,
+                          ),
                       LayoutBuilder(
                         builder: (context, constraints) {
                           final size = 260.0;
@@ -123,7 +150,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
                         ),
                       )
                     ],
-                  ),
+                      ),
+                    );
+                  }),
                 ),
                 Expanded(
                   flex: 1,

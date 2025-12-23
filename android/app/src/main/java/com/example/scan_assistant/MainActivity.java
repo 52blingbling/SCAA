@@ -52,6 +52,19 @@ public class MainActivity extends FlutterActivity {
 					// 配置 Camera2 连续对焦模式
 					boolean ok = configureContinuousFocus();
 					result.success(ok);
+				} else if (call.method.equals("focusAt")) {
+					Double x = call.argument("x");
+					Double y = call.argument("y");
+					boolean ok = focusAtPoint(x == null ? 0.5 : x, y == null ? 0.5 : y);
+					result.success(ok);
+				} else if (call.method.equals("setExposure")) {
+					Double delta = call.argument("delta");
+					boolean ok = adjustExposure(delta == null ? 0.0 : delta);
+					result.success(ok);
+				} else if (call.method.equals("setZoom")) {
+					Double scale = call.argument("scale");
+					boolean ok = applyZoom(scale == null ? 1.0 : scale);
+					result.success(ok);
 				} else {
 					result.notImplemented();
 				}
@@ -187,6 +200,80 @@ public class MainActivity extends FlutterActivity {
 		} catch (Exception e) {
 			e.printStackTrace();
 			return null;
+		}
+	}
+
+	/**
+	 * 尝试对指定归一化坐标点触发对焦（0..1）
+	 * 由于相机会话可能由第三方库管理，此处仅检测并记录请求。
+	 */
+	private boolean focusAtPoint(double nx, double ny) {
+		try {
+			Log.d(TAG, String.format("Request focusAt: x=%.3f y=%.3f", nx, ny));
+			CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+			if (cameraManager == null) return false;
+			String[] ids = cameraManager.getCameraIdList();
+			if (ids.length == 0) return false;
+			String cameraId = selectBackCamera(cameraManager, ids);
+			if (cameraId == null) cameraId = ids[0];
+			CameraCharacteristics chars = cameraManager.getCameraCharacteristics(cameraId);
+			int[] afModes = chars.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES);
+			if (afModes == null) return false;
+			// 无法直接访问到 CaptureSession，这里仅确认支持 AF and log
+			boolean hasAuto = false;
+			for (int m : afModes) if (m == CaptureRequest.CONTROL_AF_MODE_AUTO || m == CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE) hasAuto = true;
+			Log.d(TAG, "focusAtPoint supported modes present: " + hasAuto);
+			return hasAuto;
+		} catch (Exception e) {
+			Log.w(TAG, "focusAtPoint error: " + e.getMessage());
+			return false;
+		}
+	}
+
+	/**
+	 * 调整曝光（delta 为归一化增量，正为增加曝光）
+	 * 仅检测并记录，无法保证立即生效（取决于相机实现）
+	 */
+	private boolean adjustExposure(double delta) {
+		try {
+			Log.d(TAG, String.format("Request adjustExposure delta=%.4f", delta));
+			CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+			if (cameraManager == null) return false;
+			String[] ids = cameraManager.getCameraIdList();
+			if (ids.length == 0) return false;
+			String cameraId = selectBackCamera(cameraManager, ids);
+			if (cameraId == null) cameraId = ids[0];
+			CameraCharacteristics chars = cameraManager.getCameraCharacteristics(cameraId);
+			Integer maxAeRegions = 1; // placeholder check
+			// 无法直接修改 AE，而不持有 CameraCaptureSession；这里返回是否存在 AE 模式信息
+			int[] aeModes = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES);
+			Log.d(TAG, "AE modes: " + (aeModes == null ? "null" : java.util.Arrays.toString(aeModes)));
+			return aeModes != null && aeModes.length > 0;
+		} catch (Exception e) {
+			Log.w(TAG, "adjustExposure error: " + e.getMessage());
+			return false;
+		}
+	}
+
+	/**
+	 * 申请变焦（scale 为期望缩放倍数），返回是否在设备最大数值内。
+	 */
+	private boolean applyZoom(double scale) {
+		try {
+			CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+			if (cameraManager == null) return false;
+			String[] ids = cameraManager.getCameraIdList();
+			if (ids.length == 0) return false;
+			String cameraId = selectBackCamera(cameraManager, ids);
+			if (cameraId == null) cameraId = ids[0];
+			CameraCharacteristics chars = cameraManager.getCameraCharacteristics(cameraId);
+			Float maxZoom = chars.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM);
+			if (maxZoom == null) return false;
+			Log.d(TAG, String.format("Requested zoom=%.3f, maxZoom=%.3f", scale, maxZoom));
+			return scale <= maxZoom;
+		} catch (Exception e) {
+			Log.w(TAG, "applyZoom error: " + e.getMessage());
+			return false;
 		}
 	}
 

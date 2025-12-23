@@ -21,6 +21,7 @@ class ImportQRScreen extends StatefulWidget {
 
 class _ImportQRScreenState extends State<ImportQRScreen> {
   MobileScannerController? _controller;
+  final MethodChannel _nativeChannel = const MethodChannel('scan_assistant/native');
   bool _permissionGranted = false;
   bool _isProcessing = false;
   String? _errorMessage;
@@ -157,13 +158,37 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
           ? Stack(
               fit: StackFit.expand,
               children: [
-                MobileScanner(
-                    controller: _controller ??= MobileScannerController(
-                    detectionSpeed: DetectionSpeed.normal,
-                    detectionTimeoutMs: 600,
-                  ),
-                  onDetect: _onDetect,
-                ),
+                LayoutBuilder(builder: (context, constraints) {
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapDown: (details) async {
+                      try {
+                        final dx = details.localPosition.dx / constraints.maxWidth;
+                        final dy = details.localPosition.dy / constraints.maxHeight;
+                        await _nativeChannel.invokeMethod('focusAt', {'x': dx, 'y': dy});
+                      } catch (e) {}
+                    },
+                    onVerticalDragUpdate: (details) async {
+                      try {
+                        final delta = -details.delta.dy / constraints.maxHeight;
+                        await _nativeChannel.invokeMethod('setExposure', {'delta': delta});
+                      } catch (e) {}
+                    },
+                    onScaleUpdate: (details) async {
+                      try {
+                        final scale = details.scale.clamp(0.5, 6.0);
+                        await _nativeChannel.invokeMethod('setZoom', {'scale': scale});
+                      } catch (e) {}
+                    },
+                    child: MobileScanner(
+                      controller: _controller ??= MobileScannerController(
+                        detectionSpeed: DetectionSpeed.normal,
+                        detectionTimeoutMs: 600,
+                      ),
+                      onDetect: _onDetect,
+                    ),
+                  );
+                }),
                 // 扫描框
                 LayoutBuilder(
                   builder: (context, constraints) {
