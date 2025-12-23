@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
+import '../widgets/camera_scanner.dart';
 // image-from-gallery decoding removed to avoid native-decode dependency
 import '../services/qr_service.dart';
 import '../models/unit.dart';

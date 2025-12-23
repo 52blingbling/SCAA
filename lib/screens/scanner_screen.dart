@@ -7,6 +7,7 @@ import '../services/audio_service.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
+import '../widgets/camera_scanner.dart';
 
 class ScannerScreen extends StatefulWidget {
   final String unitId;
