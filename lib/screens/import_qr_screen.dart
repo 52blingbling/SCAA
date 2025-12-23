@@ -180,12 +180,17 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
                         await _nativeChannel.invokeMethod('setZoom', {'scale': scale});
                       } catch (e) {}
                     },
-                    child: MobileScanner(
-                      controller: _controller ??= MobileScannerController(
-                        detectionSpeed: DetectionSpeed.normal,
-                        detectionTimeoutMs: 600,
-                      ),
-                      onDetect: _onDetect,
+                    child: CameraScanner(
+                      onDetect: (text) async {
+                        if (_isProcessing) return;
+                        setState(() { _isProcessing = true; });
+                        try {
+                          // handle import QR data
+                          _handleQRData(text);
+                        } finally {
+                          setState(() { _isProcessing = false; });
+                        }
+                      },
                     ),
                   );
                 }),

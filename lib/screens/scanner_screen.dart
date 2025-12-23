@@ -113,13 +113,27 @@ class _ScannerScreenState extends State<ScannerScreen> {
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          MobileScanner(
-                            controller: _controller ??= MobileScannerController(
-                              detectionSpeed: DetectionSpeed.normal,
-                              detectionTimeoutMs: 600,
-                            ),
-                            onDetect: _onDetect,
-                          ),
+                              // 使用自定义 CameraScanner 替代 mobile_scanner 以便支持对焦/曝光/变焦手势
+                              CameraScanner(
+                                onDetect: (text) async {
+                                  // reuse existing _onDetect flow by constructing a fake BarcodeCapture flow
+                                  if (_isProcessing) return;
+                                  _isProcessing = true;
+                                  setState(() {
+                                    _resultCode = text;
+                                    _scanSuccess = true;
+                                  });
+                                  AudioService.playScanSound();
+                                  HapticFeedback.lightImpact();
+                                  await Future.delayed(const Duration(milliseconds: 300));
+                                  if (mounted) {
+                                    Provider.of<UnitService>(context, listen: false).addScanRecord(widget.unitId, text);
+                                    setState(() => _scanSuccess = false);
+                                    Navigator.pop(context);
+                                  }
+                                  _isProcessing = false;
+                                },
+                              ),
                       LayoutBuilder(
                         builder: (context, constraints) {
                           final size = 260.0;
