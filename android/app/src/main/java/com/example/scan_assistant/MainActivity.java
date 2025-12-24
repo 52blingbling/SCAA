@@ -24,6 +24,7 @@ import com.google.zxing.MultiFormatReader;
 import com.google.zxing.Result;
 import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.RGBLuminanceSource;
+import com.google.zxing.PlanarYUVLuminanceSource;
 
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
@@ -65,10 +66,29 @@ public class MainActivity extends FlutterActivity {
 					Double scale = call.argument("scale");
 					boolean ok = applyZoom(scale == null ? 1.0 : scale);
 					result.success(ok);
+				} else if (call.method.equals("decodeImageBytes")) {
+					byte[] bytes = call.argument("bytes");
+					Integer w = call.argument("width");
+					Integer h = call.argument("height");
+					String decoded = decodeImageBytes(bytes, w == null ? 0 : w, h == null ? 0 : h);
+					result.success(decoded);
 				} else {
 					result.notImplemented();
 				}
 			});
+	}
+
+	private String decodeImageBytes(byte[] yuvBytes, int width, int height) {
+		try {
+			if (yuvBytes == null || width <= 0 || height <= 0) return null;
+			PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(yuvBytes, width, height, 0, 0, width, height, false);
+			BinaryBitmap binaryBitmap = new BinaryBitmap(new HybridBinarizer(source));
+			Result result = new MultiFormatReader().decode(binaryBitmap);
+			return result == null ? null : result.getText();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
 	}
 
 	private boolean configureContinuousFocus() {

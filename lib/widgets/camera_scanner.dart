@@ -45,32 +45,99 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
       if (cam == null) return;
       _controller = CameraController(cam, ResolutionPreset.high, enableAudio: false, imageFormatGroup: ImageFormatGroup.yuv420);
       await _controller!.initialize();
-      // start periodic capture
-      _captureTimer = Timer.periodic(widget.captureInterval, (_) => _periodicCapture());
+      // start image stream for real-time decoding
+      try {
+        await _controller!.startImageStream(_handleCameraImage);
+      } catch (e) {
+        // fallback to periodic capture if stream fails
+        _captureTimer = Timer.periodic(widget.captureInterval, (_) => _periodicCapture());
+      }
       if (mounted) setState(() {});
     } catch (e) {
       debugPrint('Camera init error: $e');
     }
   }
 
-  Future<void> _periodicCapture() async {
-    if (_controller == null || !_controller!.value.isInitialized) return;
+  // imageStream handler and YUV -> NV21 converter
+  DateTime _lastDecode = DateTime.fromMillisecondsSinceEpoch(0);
+  final Duration _minInterval = const Duration(milliseconds: 200);
+
+  void _handleCameraImage(CameraImage image) async {
+    // throttle
+    if (DateTime.now().difference(_lastDecode) < _minInterval) return;
     if (_busy) return;
     _busy = true;
+    _lastDecode = DateTime.now();
     try {
-      final XFile file = await _controller!.takePicture();
-      final path = file.path;
-      final decoded = await _native.invokeMethod('decodeImage', {'path': path});
-      if (decoded != null && decoded is String && decoded.isNotEmpty) {
-        widget.onDetect(decoded);
+      if (Platform.isAndroid) {
+        final nv21 = _convertYUV420ToNV21(image);
+        try {
+          final decoded = await _native.invokeMethod('decodeImageBytes', {
+            'bytes': nv21,
+            'width': image.width,
+            'height': image.height,
+          });
+          if (decoded != null && decoded is String && decoded.isNotEmpty) {
+            widget.onDetect(decoded);
+          }
+        } catch (e) {
+          // ignore decode errors
+        }
+      } else {
+        // iOS fallback: periodic file capture
+        final XFile file = await _controller!.takePicture();
+        final path = file.path;
+        final decoded = await _native.invokeMethod('decodeImage', {'path': path});
+        if (decoded != null && decoded is String && decoded.isNotEmpty) {
+          widget.onDetect(decoded);
+        }
+        try { File(path).deleteSync(); } catch (_) {}
       }
-      // remove temp file to save space
-      try { File(path).deleteSync(); } catch (_) {}
     } catch (e) {
-      // ignore occasional failures
+      // ignore
     } finally {
       _busy = false;
     }
+  }
+
+  Uint8List _convertYUV420ToNV21(CameraImage image) {
+    final int width = image.width;
+    final int height = image.height;
+    final Plane yPlane = image.planes[0];
+    final Plane uPlane = image.planes[1];
+    final Plane vPlane = image.planes[2];
+
+    final int ySize = width * height;
+    final int uvSize = width * height ~/ 2;
+    final Uint8List nv21 = Uint8List(ySize + uvSize);
+
+    // copy Y
+    if (yPlane.bytes.length == ySize) {
+      nv21.setRange(0, ySize, yPlane.bytes);
+    } else {
+      int dst = 0;
+      for (int i = 0; i < height; i++) {
+        final int srcOffset = i * yPlane.bytesPerRow;
+        nv21.setRange(dst, dst + width, yPlane.bytes.sublist(srcOffset, srcOffset + width));
+        dst += width;
+      }
+    }
+
+    // interleave V and U (NV21: VU VU ...)
+    int dst = ySize;
+    final int chromaHeight = (height / 2).floor();
+    final int chromaWidth = (width / 2).floor();
+    for (int row = 0; row < chromaHeight; row++) {
+      for (int col = 0; col < chromaWidth; col++) {
+        final int uIndex = row * uPlane.bytesPerRow + col * uPlane.bytesPerPixel;
+        final int vIndex = row * vPlane.bytesPerRow + col * vPlane.bytesPerPixel;
+        // V
+        nv21[dst++] = vPlane.bytes[vIndex];
+        // U
+        nv21[dst++] = uPlane.bytes[uIndex];
+      }
+    }
+    return nv21;
   }
 
   @override
