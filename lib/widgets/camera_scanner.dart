@@ -102,28 +102,34 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
         onTapDown: (details) async {
           final dx = details.localPosition.dx / constraints.maxWidth;
           final dy = details.localPosition.dy / constraints.maxHeight;
-          // try camera plugin focusPoint if available, else native
+          // 尝试使用 camera 插件的对焦 API；若不可用则回退到原生 MethodChannel
           try {
-            final focusSupported = _controller!.value.isFocusPointSupported;
-            if (focusSupported) {
-              await _controller!.setFocusPoint(Offset(dx, dy));
-            } else {
-              await _native.invokeMethod('focusAt', {'x': dx, 'y': dy});
-            }
+            await _controller!.setFocusPoint(Offset(dx, dy));
             HapticFeedback.selectionClick();
           } catch (e) {
-            try { await _native.invokeMethod('focusAt', {'x': dx, 'y': dy}); } catch(_){}
+            try {
+              await _native.invokeMethod('focusAt', {'x': dx, 'y': dy});
+              HapticFeedback.selectionClick();
+            } catch (e2) {
+              // 最终忽略错误
+            }
           }
         },
         onVerticalDragUpdate: (details) async {
           final delta = -details.delta.dy / constraints.maxHeight; // normalized
+          // 先尝试 camera 插件的 setExposureOffset（如果支持）；失败则回退到原生
           try {
-            // try setExposureOffset if available
-            final current = _controller!.value.exposureOffset ?? 0.0;
-            final newOffset = (current + delta).clamp(_controller!.value.minExposureOffset ?? -2.0, _controller!.value.maxExposureOffset ?? 2.0);
+            // 使用一个经验范围 -2.0..2.0
+            double current = 0.0;
+            try {
+              current = await _controller!.getExposureOffset();
+            } catch (_) {}
+            final newOffset = (current + delta).clamp(-2.0, 2.0);
             await _controller!.setExposureOffset(newOffset);
           } catch (e) {
-            try { await _native.invokeMethod('setExposure', {'delta': delta}); } catch(_){}
+            try {
+              await _native.invokeMethod('setExposure', {'delta': delta});
+            } catch (_) {}
           }
         },
         onScaleStart: (details) => _baseZoom = _currentZoom,
