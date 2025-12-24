@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
@@ -23,6 +24,7 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
   List<CameraDescription>? _cameras;
   double _currentZoom = 1.0;
   double _baseZoom = 1.0;
+  double _currentExposure = 0.0;
   Timer? _captureTimer;
   bool _busy = false;
   final MethodChannel _native = const MethodChannel('scan_assistant/native');
@@ -55,6 +57,25 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
       if (mounted) setState(() {});
     } catch (e) {
       debugPrint('Camera init error: $e');
+    }
+  }
+
+  Future<void> _periodicCapture() async {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+    if (_busy) return;
+    _busy = true;
+    try {
+      final XFile file = await _controller!.takePicture();
+      final path = file.path;
+      final decoded = await _native.invokeMethod('decodeImage', {'path': path});
+      if (decoded != null && decoded is String && decoded.isNotEmpty) {
+        widget.onDetect(decoded);
+      }
+      try { File(path).deleteSync(); } catch (_) {}
+    } catch (e) {
+      // ignore
+    } finally {
+      _busy = false;
     }
   }
 
@@ -129,8 +150,8 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
     final int chromaWidth = (width / 2).floor();
     for (int row = 0; row < chromaHeight; row++) {
       for (int col = 0; col < chromaWidth; col++) {
-        final int uIndex = row * uPlane.bytesPerRow + col * uPlane.bytesPerPixel;
-        final int vIndex = row * vPlane.bytesPerRow + col * vPlane.bytesPerPixel;
+        final int uIndex = ((row * (uPlane.bytesPerRow ?? 0)) + (col * (uPlane.bytesPerPixel ?? 1))).toInt();
+        final int vIndex = ((row * (vPlane.bytesPerRow ?? 0)) + (col * (vPlane.bytesPerPixel ?? 1))).toInt();
         // V
         nv21[dst++] = vPlane.bytes[vIndex];
         // U
@@ -186,13 +207,10 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
           final delta = -details.delta.dy / constraints.maxHeight; // normalized
           // 先尝试 camera 插件的 setExposureOffset（如果支持）；失败则回退到原生
           try {
-            // 使用一个经验范围 -2.0..2.0
-            double current = 0.0;
-            try {
-              current = await _controller!.getExposureOffset();
-            } catch (_) {}
-            final newOffset = (current + delta).clamp(-2.0, 2.0);
+            // 使用类字段跟踪当前曝光偏移
+            final newOffset = (_currentExposure + delta).clamp(-2.0, 2.0);
             await _controller!.setExposureOffset(newOffset);
+            _currentExposure = newOffset;
           } catch (e) {
             try {
               await _native.invokeMethod('setExposure', {'delta': delta});
