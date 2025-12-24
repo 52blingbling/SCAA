@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:typed_data';
@@ -21,7 +20,7 @@ class ImportQRScreen extends StatefulWidget {
 }
 
 class _ImportQRScreenState extends State<ImportQRScreen> {
-  MobileScannerController? _controller;
+  // 使用 CameraScanner；移除 MobileScannerController 以避免冲突
   final MethodChannel _nativeChannel = const MethodChannel('scan_assistant/native');
   bool _permissionGranted = false;
   bool _isProcessing = false;
@@ -50,13 +49,7 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
     });
     
     if (status && mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _controller ??= MobileScannerController(
-          detectionSpeed: DetectionSpeed.normal,
-          detectionTimeoutMs: 300,
-        );
-        _controller!.start();
-      });
+      // CameraScanner 会在自身初始化时打开相机
     }
   }
 
@@ -160,39 +153,16 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
               fit: StackFit.expand,
               children: [
                 LayoutBuilder(builder: (context, constraints) {
-                  return GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTapDown: (details) async {
+                  return CameraScanner(
+                    onDetect: (text) async {
+                      if (_isProcessing) return;
+                      setState(() { _isProcessing = true; });
                       try {
-                        final dx = details.localPosition.dx / constraints.maxWidth;
-                        final dy = details.localPosition.dy / constraints.maxHeight;
-                        await _nativeChannel.invokeMethod('focusAt', {'x': dx, 'y': dy});
-                      } catch (e) {}
+                        _handleQRData(text);
+                      } finally {
+                        setState(() { _isProcessing = false; });
+                      }
                     },
-                    onVerticalDragUpdate: (details) async {
-                      try {
-                        final delta = -details.delta.dy / constraints.maxHeight;
-                        await _nativeChannel.invokeMethod('setExposure', {'delta': delta});
-                      } catch (e) {}
-                    },
-                    onScaleUpdate: (details) async {
-                      try {
-                        final scale = details.scale.clamp(0.5, 6.0);
-                        await _nativeChannel.invokeMethod('setZoom', {'scale': scale});
-                      } catch (e) {}
-                    },
-                    child: CameraScanner(
-                      onDetect: (text) async {
-                        if (_isProcessing) return;
-                        setState(() { _isProcessing = true; });
-                        try {
-                          // handle import QR data
-                          _handleQRData(text);
-                        } finally {
-                          setState(() { _isProcessing = false; });
-                        }
-                      },
-                    ),
                   );
                 }),
                 // 扫描框

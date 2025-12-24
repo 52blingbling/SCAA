@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import '../services/unit_service.dart';
 import '../services/permission_service.dart';
@@ -19,7 +18,7 @@ class ScannerScreen extends StatefulWidget {
 }
 
 class _ScannerScreenState extends State<ScannerScreen> {
-  MobileScannerController? _controller;
+  // 使用自定义 CameraScanner，移除 MobileScannerController 以避免冲突
   final MethodChannel _nativeChannel = const MethodChannel('scan_assistant/native');
   String? _resultCode;
   bool _permissionGranted = false;
@@ -46,11 +45,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
   @override
   void reassemble() {
     super.reassemble();
-    if (Platform.isAndroid) {
-      _controller?.stop();
-    } else if (Platform.isIOS) {
-      _controller?.start();
-    }
+    // Camera lifecycle handled inside CameraScanner
   }
 
   Future<void> _requestCameraPermission() async {
@@ -60,13 +55,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     });
     
     if (granted && mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _controller ??= MobileScannerController(
-          detectionSpeed: DetectionSpeed.normal,
-          detectionTimeoutMs: 300,
-        );
-        _controller!.start();
-      });
+      // CameraScanner 会在自身初始化时打开相机
     }
   }
 
@@ -86,32 +75,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                 Expanded(
                   flex: 4,
                   child: LayoutBuilder(builder: (context, constraints) {
-                    return GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTapDown: (details) async {
-                        try {
-                          final dx = details.localPosition.dx / constraints.maxWidth;
-                          final dy = details.localPosition.dy / constraints.maxHeight;
-                          await _nativeChannel.invokeMethod('focusAt', {'x': dx, 'y': dy});
-                        } catch (e) {
-                          // ignore
-                        }
-                      },
-                      onVerticalDragUpdate: (details) async {
-                        try {
-                          // vertical drag: negative -> increase exposure, positive -> decrease
-                          final delta = -details.delta.dy / constraints.maxHeight;
-                          await _nativeChannel.invokeMethod('setExposure', {'delta': delta});
-                        } catch (e) {}
-                      },
-                      onScaleStart: (details) {},
-                      onScaleUpdate: (details) async {
-                        try {
-                          final scale = details.scale.clamp(0.5, 6.0);
-                          await _nativeChannel.invokeMethod('setZoom', {'scale': scale});
-                        } catch (e) {}
-                      },
-                      child: Stack(
+                    return Stack(
                         fit: StackFit.expand,
                         children: [
                               // 使用自定义 CameraScanner 替代 mobile_scanner 以便支持对焦/曝光/变焦手势
