@@ -94,10 +94,45 @@ public class MainActivity extends FlutterActivity {
 	private String decodeImageBytes(byte[] yuvBytes, int width, int height) {
 		try {
 			if (yuvBytes == null || width <= 0 || height <= 0) return null;
-			PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(yuvBytes, width, height, 0, 0, width, height, false);
-			BinaryBitmap binaryBitmap = new BinaryBitmap(new HybridBinarizer(source));
-			Result result = new MultiFormatReader().decode(binaryBitmap, DECODE_HINTS);
-			return result == null ? null : result.getText();
+			
+			// 思路：将蓝色分量(U)融合到亮度分量(Y)中，增强蓝色码的对比度
+			// YUV420 格式中，U 分量在 Y 分量之后。为了性能，我们只在扫描频率较高时进行轻量处理。
+			byte[] enhancedY = new byte[width * height];
+			int ySize = width * height;
+			
+			// 只有在尝试解决蓝码识别时才执行此循环
+			for (int i = 0; i < ySize; i++) {
+				int yVal = yuvBytes[i] & 0xFF;
+				// 获取对应的 U 分量 (大致采样即可，不需要精确到像素对齐以保持性能)
+				int uIdx = ySize + (i / width / 2) * (width / 2) + (i % width / 2);
+				if (uIdx < yuvBytes.length) {
+					int uVal = (yuvBytes[uIdx] & 0xFF) - 128;
+					if (uVal > 10) { // 偏蓝区域
+						yVal = Math.min(255, yVal + uVal * 2); 
+					}
+				}
+				enhancedY[i] = (byte) yVal;
+			}
+
+			PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(
+				enhancedY, width, height, 0, 0, width, height, false
+			);
+			
+			MultiFormatReader reader = new MultiFormatReader();
+			
+			// 第一遍：常规增强扫描
+			try {
+				Result result = reader.decode(new BinaryBitmap(new HybridBinarizer(source)), DECODE_HINTS);
+				if (result != null) return result.getText();
+			} catch (Exception ignored) {}
+
+			// 第二遍：反色扫描 (黑底蓝码的核心补救措施)
+			try {
+				Result result = reader.decode(new BinaryBitmap(new HybridBinarizer(source.invert())), DECODE_HINTS);
+				if (result != null) return result.getText();
+			} catch (Exception ignored) {}
+
+			return null;
 		} catch (Exception e) {
 			return null;
 		}
@@ -112,9 +147,20 @@ public class MainActivity extends FlutterActivity {
 			int[] pixels = new int[width * height];
 			bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
 			RGBLuminanceSource source = new RGBLuminanceSource(width, height, pixels);
-			BinaryBitmap binaryBitmap = new BinaryBitmap(new HybridBinarizer(source));
-			Result result = new MultiFormatReader().decode(binaryBitmap, DECODE_HINTS);
-			return result == null ? null : result.getText();
+			
+			MultiFormatReader reader = new MultiFormatReader();
+			try {
+				Result result = reader.decode(new BinaryBitmap(new HybridBinarizer(source)), DECODE_HINTS);
+				if (result != null) return result.getText();
+			} catch (Exception ignored) {}
+
+			// 文件导入也支持反色重试
+			try {
+				Result result = reader.decode(new BinaryBitmap(new HybridBinarizer(source.invert())), DECODE_HINTS);
+				if (result != null) return result.getText();
+			} catch (Exception ignored) {}
+			
+			return null;
 		} catch (Exception e) {
 			return null;
 		}
