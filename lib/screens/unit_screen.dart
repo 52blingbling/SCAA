@@ -135,7 +135,7 @@ class _UnitScreenState extends State<UnitScreen> {
                                         style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
-                                          color: Colors.blackDE,
+                                          color: Colors.black87,
                                         ),
                                       ),
                               ],
