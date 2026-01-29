@@ -119,10 +119,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
                         ),
                       )
                     ],
-                      ),
-                    );
-                  }),
-                ),
+                  ),
+                );
+              }),
+            ),
                 Expanded(
                   flex: 1,
                   child: Center(

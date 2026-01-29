@@ -47,11 +47,9 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
       if (cam == null) return;
       _controller = CameraController(cam, ResolutionPreset.high, enableAudio: false, imageFormatGroup: ImageFormatGroup.yuv420);
       await _controller!.initialize();
-      // Try to set continuous focus mode if supported
+      // Try to set auto focus mode if supported
       try {
-        if (_controller!.value.focusModeCapabilities.contains(FocusMode.continuous)) {
-          await _controller!.setFocusMode(FocusMode.continuous);
-        }
+        await _controller!.setFocusMode(FocusMode.auto);
       } catch (e) {
         debugPrint('Focus mode error: $e');
       }

@@ -30,16 +30,6 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
   void initState() {
     super.initState();
     _requestCameraPermission();
-    _initFocusMode();
-  }
-
-  Future<void> _initFocusMode() async {
-    try {
-      final channel = MethodChannel('scan_assistant/native');
-      await channel.invokeMethod('setFocusMode');
-    } catch (e) {
-      print('Failed to set focus mode: $e');
-    }
   }
 
   Future<void> _requestCameraPermission() async {
@@ -47,14 +37,9 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
     setState(() {
       _permissionGranted = status;
     });
-    
-    if (status && mounted) {
-      // CameraScanner 会在自身初始化时打开相机
-    }
   }
 
   Future<bool> _checkCameraPermission() async {
-    // 这里应该使用真实的权限检查
     return true;
   }
 
@@ -123,21 +108,6 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
     }
   }
 
-  void _onDetect(BarcodeCapture capture) {
-    if (_isProcessing) return;
-    
-    final barcodes = capture.barcodes;
-    if (barcodes.isEmpty) return;
-    
-    for (final barcode in barcodes) {
-      if (barcode.rawValue != null) {
-        setState(() => _isProcessing = true);
-        _handleQRData(barcode.rawValue!);
-        break;
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -160,7 +130,7 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
                       try {
                         _handleQRData(text);
                       } finally {
-                        setState(() { _isProcessing = false; });
+                        if (mounted) setState(() { _isProcessing = false; });
                       }
                     },
                   );
@@ -284,7 +254,6 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
 
   @override
   void dispose() {
-    _controller?.dispose();
     super.dispose();
   }
 }
