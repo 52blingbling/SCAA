@@ -24,7 +24,7 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
   List<CameraDescription>? _cameras;
   double _currentZoom = 1.0;
   double _baseZoom = 1.0;
-  double _currentExposure = 0.0;
+  double _currentExposure = -1.0;
   Timer? _captureTimer;
   bool _busy = false;
   final MethodChannel _native = const MethodChannel('scan_assistant/native');
@@ -53,6 +53,13 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
       } catch (e) {
         debugPrint('Focus mode error: $e');
       }
+      // 尝试设置较低的默认曝光度，提高二维码识别率
+      try {
+        await _controller!.setExposureOffset(-1.0);
+      } catch (e) {
+        debugPrint('Set exposure error: $e');
+      }
+      
       // start image stream for real-time decoding
       try {
         await _controller!.startImageStream(_handleCameraImage);

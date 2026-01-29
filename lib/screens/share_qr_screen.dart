@@ -369,7 +369,11 @@ class _ShareQRScreenState extends State<ShareQRScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Center(
-                          child: Text('保存到相册', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                          child: Text('保存到相册', style: TextStyle(
+                            fontSize: 16, 
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          )),
                         ),
                 ),
               ),

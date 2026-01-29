@@ -44,13 +44,12 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
     final importedUnit = QRService.decodeUnit(text);
     
     if (importedUnit != null) {
-      await unitService.addUnitFromImport(importedUnit);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('成功导入单元: ${importedUnit.name}'), backgroundColor: Colors.green),
         );
-        Navigator.pop(context);
         widget.onUnitImported(importedUnit);
+        Navigator.pop(context);
       }
     } else {
       // 如果解析失败，说明扫到的可能是一个普通的设备码，而不是分享码
