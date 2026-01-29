@@ -8,25 +8,21 @@ class QRService {
     // 检测是否可以压缩（检查后四位是否只有变化）
     final compressed = _tryCompressRecords(unit.scanRecords);
     
+    final Map<String, dynamic> data = {
+      'v': 3, // 版本3 - 支持主控码
+      'n': unit.name,
+      'm': unit.masterCode, // 主控码
+    };
+
     if (compressed != null) {
-      // 使用压缩格式
-      final data = {
-        'v': 2, // 版本2 - 压缩格式
-        'n': unit.name,
-        'c': compressed,
-      };
-      return base64Encode(utf8.encode(jsonEncode(data)));
+      data['c'] = compressed;
     } else {
-      // 使用标准格式
-      final data = {
-        'v': 1, // 版本1 - 标准格式
-        'n': unit.name,
-        'r': unit.scanRecords
-            .map((r) => {'i': r.index, 't': r.content})
-            .toList(),
-      };
-      return base64Encode(utf8.encode(jsonEncode(data)));
+      data['r'] = unit.scanRecords
+          .map((r) => {'i': r.index, 't': r.content})
+          .toList();
     }
+    
+    return base64Encode(utf8.encode(jsonEncode(data)));
   }
 
   // 从二维码数据解码为Unit
@@ -37,16 +33,17 @@ class QRService {
       
       final version = json['v'] as int?;
       final unitName = json['n'] as String?;
+      final masterCode = json['m'] as String?;
       
       if (unitName == null) return null;
       
       List<ScanRecord> records = [];
       
-      if (version == 2) {
+      if (json.containsKey('c')) {
         // 压缩格式
         final compressed = json['c'];
         records = _decompressRecords(compressed);
-      } else if (version == 1) {
+      } else if (json.containsKey('r')) {
         // 标准格式
         final recordsList = json['r'] as List?;
         if (recordsList != null) {
@@ -65,6 +62,7 @@ class QRService {
       return Unit(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: unitName,
+        masterCode: masterCode,
         createdAt: DateTime.now(),
         scanRecords: records,
       );
@@ -216,14 +214,9 @@ class QRService {
   }
 
   // 估算编码后的大小（用于显示支持的最大条数）
-  static int estimateCapacity(List<ScanRecord> records) {
+  static int estimateCapacity(Unit unit) {
     try {
-      final encoded = encodeUnit(Unit(
-        id: 'test',
-        name: 'test_unit',
-        createdAt: DateTime.now(),
-        scanRecords: records,
-      ));
+      final encoded = encodeUnit(unit);
       
       // Base64编码后的大小
       return encoded.length;
@@ -233,7 +226,7 @@ class QRService {
   }
 
   // 检查数据是否能放入二维码（QR Code Version 40的约2500字节限制）
-  static bool canFitInQR(List<ScanRecord> records) {
-    return estimateCapacity(records) <= 2500;
+  static bool canFitInQR(Unit unit) {
+    return estimateCapacity(unit) <= 2500;
   }
 }

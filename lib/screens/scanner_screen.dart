@@ -53,103 +53,107 @@ class _ScannerScreenState extends State<ScannerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(widget.isMasterScan ? '主控扫码' : '扫码界面'),
+        title: Text(widget.isMasterScan ? '主控扫码' : '扫码界面', style: const TextStyle(color: Colors.white)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
+      backgroundColor: Colors.black,
       body: _permissionGranted
-          ? Column(
+          ? Stack(
+              fit: StackFit.expand,
               children: [
-                Expanded(
-                  flex: 4,
-                  child: LayoutBuilder(builder: (context, constraints) {
-                    return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                              // 使用自定义 CameraScanner 替代 mobile_scanner 以便支持对焦/曝光/变焦手势
-                              CameraScanner(
-                                onDetect: (text) async {
-                                  // reuse existing _onDetect flow by constructing a fake BarcodeCapture flow
-                                  if (_isProcessing) return;
-                                  _isProcessing = true;
-                                  setState(() {
-                                    _resultCode = text;
-                                    _scanSuccess = true;
-                                  });
-                                  AudioService.playScanSound();
-                                  HapticFeedback.lightImpact();
-                                  await Future.delayed(const Duration(milliseconds: 300));
-                                  if (mounted) {
-                                    if (widget.isMasterScan) {
-                                      Provider.of<UnitService>(context, listen: false).setMasterCode(widget.unitId, text);
-                                    } else {
-                                      Provider.of<UnitService>(context, listen: false).addScanRecord(widget.unitId, text);
-                                    }
-                                    setState(() => _scanSuccess = false);
-                                    Navigator.pop(context);
-                                  }
-                                  _isProcessing = false;
-                                },
-                              ),
-                      // 扫描框和遮罩 - 加入 IgnorePointer 允许手势穿透到底层 CameraScanner
-                      IgnorePointer(
-                        child: Stack(
-                          children: [
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                final size = 260.0;
-                                final rect = Rect.fromCenter(
-                                  center: Offset(
-                                    constraints.maxWidth / 2,
-                                    constraints.maxHeight / 2,
-                                  ),
-                                  width: size,
-                                  height: size,
-                                );
-                                return SizedBox.expand(
-                                  child: CustomPaint(
-                                    painter: _ScannerOverlayPainter(
-                                      hole: RRect.fromRectAndRadius(rect, const Radius.circular(16)),
-                                      borderColor: _invalidFeedback
-                                          ? Colors.redAccent
-                                          : (_scanSuccess ? Colors.greenAccent : Colors.white),
-                                    ),
-                                  ),
-                                );
-                              },
+                // 使用自定义 CameraScanner 替代 mobile_scanner 以便支持对焦/曝光/变焦手势
+                CameraScanner(
+                  onDetect: (text) async {
+                    // reuse existing _onDetect flow by constructing a fake BarcodeCapture flow
+                    if (_isProcessing) return;
+                    _isProcessing = true;
+                    setState(() {
+                      _resultCode = text;
+                      _scanSuccess = true;
+                    });
+                    AudioService.playScanSound();
+                    HapticFeedback.lightImpact();
+                    await Future.delayed(const Duration(milliseconds: 300));
+                    if (mounted) {
+                      if (widget.isMasterScan) {
+                        Provider.of<UnitService>(context, listen: false).setMasterCode(widget.unitId, text);
+                      } else {
+                        Provider.of<UnitService>(context, listen: false).addScanRecord(widget.unitId, text);
+                      }
+                      setState(() => _scanSuccess = false);
+                      Navigator.pop(context);
+                    }
+                    _isProcessing = false;
+                  },
+                ),
+                // 扫描框和遮罩 - 加入 IgnorePointer 允许手势穿透到底层 CameraScanner
+                IgnorePointer(
+                  child: Stack(
+                    children: [
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final size = 260.0;
+                          final rect = Rect.fromCenter(
+                            center: Offset(
+                              constraints.maxWidth / 2,
+                              constraints.maxHeight / 2,
                             ),
-                            Center(
-                              child: Container(
-                                width: 260,
-                                height: 260,
-                                alignment: Alignment.center,
-                                child: const Text(
-                                  '将二维码置于白色框内',
-                                  style: TextStyle(color: Colors.white70),
-                                ),
+                            width: size,
+                            height: size,
+                          );
+                          return SizedBox.expand(
+                            child: CustomPaint(
+                              painter: _ScannerOverlayPainter(
+                                hole: RRect.fromRectAndRadius(rect, const Radius.circular(16)),
+                                borderColor: _invalidFeedback
+                                    ? Colors.redAccent
+                                    : (_scanSuccess ? Colors.greenAccent : Colors.white),
                               ),
                             ),
-                          ],
+                          );
+                        },
+                      ),
+                      Center(
+                        child: Container(
+                          width: 260,
+                          height: 260,
+                          alignment: Alignment.center,
+                          child: const Text(
+                            '将二维码置于白色框内',
+                            style: TextStyle(color: Colors.white70),
+                          ),
                         ),
                       ),
                     ],
-                  );
-                },
-              ),
-            ),
-            Expanded(
-              flex: 1,
-              child: Center(
-                child: (_resultCode != null)
-                    ? Text('扫描结果: ${_resultCode!}')
-                    : const Text('请将二维码对准扫描框'),
-              ),
-            ),
-          ],
-        )
+                  ),
+                ),
+                // 底部扫描结果悬浮条
+                Positioned(
+                  bottom: 30,
+                  left: 20,
+                  right: 20,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: (_resultCode != null)
+                          ? Text('扫描结果: ${_resultCode!}', style: const TextStyle(color: Colors.white))
+                          : const Text('请将二维码对准扫描框', style: TextStyle(color: Colors.white70)),
+                    ),
+                  ),
+                ),
+              ],
+            )
           : Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

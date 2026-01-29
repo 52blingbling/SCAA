@@ -95,7 +95,7 @@ class _UnitScreenState extends State<UnitScreen> {
                                     const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF007AFF), size: 20),
                                     const SizedBox(width: 8),
                                     const Text(
-                                      '主控单元',
+                                      '主控编码',
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,

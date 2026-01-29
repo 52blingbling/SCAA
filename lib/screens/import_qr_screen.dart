@@ -111,10 +111,14 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('导入单元'),
+        title: const Text('导入单元', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -232,13 +236,14 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
                 ],
               ),
             ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _isProcessing ? null : _pickImageFromGallery,
-        backgroundColor: Colors.white,
-        elevation: 4,
+        backgroundColor: Colors.black.withOpacity(0.5),
+        elevation: 0,
         shape: RoundedRectangleBorder(
-          side: BorderSide(color: const Color(0xFF007AFF).withOpacity(0.15)),
-          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.white.withOpacity(0.2)),
+          borderRadius: BorderRadius.circular(20),
         ),
         icon: _isProcessing
             ? const SizedBox(
@@ -246,13 +251,14 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
                 height: 24,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation(Color(0xFF007AFF)),
+                  valueColor: AlwaysStoppedAnimation(Colors.white),
                 ),
               )
-            : const Icon(Icons.photo_library_rounded, color: Color(0xFF007AFF)),
-        label: _isProcessing
-            ? const Text('处理中...', style: TextStyle(color: Color(0xFF007AFF)))
-            : const Text('从相册导入', style: TextStyle(color: Color(0xFF007AFF))),
+            : const Icon(Icons.photo_library_rounded, color: Colors.white),
+        label: Text(
+          _isProcessing ? '处理中...' : '从相册导入',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }

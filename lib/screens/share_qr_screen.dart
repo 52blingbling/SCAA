@@ -27,7 +27,7 @@ class _ShareQRScreenState extends State<ShareQRScreen> {
   void initState() {
     super.initState();
     // 先检查是否能放入二维码容量
-    if (!QRService.canFitInQR(widget.unit.scanRecords)) {
+    if (!QRService.canFitInQR(widget.unit)) {
       _errorMessage = '生成失败：数据超出二维码最大容量，无法生成二维码。';
       _qrData = null;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -45,7 +45,6 @@ class _ShareQRScreenState extends State<ShareQRScreen> {
     } else {
       _qrData = QRService.encodeUnit(widget.unit);
     }
-    // init done
   }
 
   Future<void> _saveQRCode() async {
@@ -56,7 +55,7 @@ class _ShareQRScreenState extends State<ShareQRScreen> {
       final recorder = ui.PictureRecorder();
       final canvas = ui.Canvas(recorder);
       const width = 600.0;
-      const height = 750.0;
+      const height = 800.0; // Slightly taller to fit master code
       
       // 白色背景
       canvas.drawRect(
@@ -74,7 +73,7 @@ class _ShareQRScreenState extends State<ShareQRScreen> {
       );
 
       canvas.save();
-      canvas.translate(50, 80);
+      canvas.translate(50, 60);
       painter.paint(canvas, const Size(500, 500));
       canvas.restore();
       
@@ -92,13 +91,24 @@ class _ShareQRScreenState extends State<ShareQRScreen> {
       );
       
       textPainter.layout();
-      textPainter.paint(
-        canvas,
-        Offset(
-          (width - textPainter.width) / 2,
-          620,
-        ),
-      );
+      textPainter.paint(canvas, Offset((width - textPainter.width) / 2, 580));
+
+      // 绘制主控码信息 (如有)
+      if (widget.unit.masterCode != null) {
+        final masterPainter = TextPainter(
+          text: TextSpan(
+            text: '主控: ${widget.unit.masterCode}',
+            style: const TextStyle(
+              color: Color(0xFF007AFF),
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        masterPainter.layout();
+        masterPainter.paint(canvas, Offset((width - masterPainter.width) / 2, 630));
+      }
       
       // 绘制记录数信息
       final infoText = '共 ${widget.unit.scanRecords.length} 条记录';
@@ -114,13 +124,7 @@ class _ShareQRScreenState extends State<ShareQRScreen> {
       );
       
       infoPainter.layout();
-      infoPainter.paint(
-        canvas,
-        Offset(
-          (width - infoPainter.width) / 2,
-          670,
-        ),
-      );
+      infoPainter.paint(canvas, Offset((width - infoPainter.width) / 2, 680));
       
       final picture = recorder.endRecording();
       final image = await picture.toImage(
@@ -297,7 +301,7 @@ class _ShareQRScreenState extends State<ShareQRScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    '${QRService.estimateCapacity(widget.unit.scanRecords)} 字节',
+                                    '${QRService.estimateCapacity(widget.unit)} 字节',
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,

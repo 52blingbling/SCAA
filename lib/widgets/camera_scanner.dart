@@ -272,7 +272,19 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
                 try { await _native.invokeMethod('setZoom', {'scale': scale}); } catch(_){}
               }
             },
-            child: CameraPreview(_controller!),
+            child: ClipRect(
+              child: OverflowBox(
+                alignment: Alignment.center,
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: constraints.maxWidth,
+                    height: constraints.maxWidth / _controller!.value.aspectRatio,
+                    child: CameraPreview(_controller!),
+                  ),
+                ),
+              ),
+            ),
           ),
           if (_showFocusCircle && _focusPoint != null)
             Positioned(
