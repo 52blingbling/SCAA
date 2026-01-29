@@ -10,8 +10,9 @@ import '../widgets/camera_scanner.dart';
 
 class ScannerScreen extends StatefulWidget {
   final String unitId;
+  final bool isMasterScan;
 
-  const ScannerScreen({Key? key, required this.unitId}) : super(key: key);
+  const ScannerScreen({Key? key, required this.unitId, this.isMasterScan = false}) : super(key: key);
 
   @override
   State<ScannerScreen> createState() => _ScannerScreenState();
@@ -53,7 +54,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('扫码界面'),
+        title: Text(widget.isMasterScan ? '主控扫码' : '扫码界面'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -82,40 +83,56 @@ class _ScannerScreenState extends State<ScannerScreen> {
                                   HapticFeedback.lightImpact();
                                   await Future.delayed(const Duration(milliseconds: 300));
                                   if (mounted) {
-                                    Provider.of<UnitService>(context, listen: false).addScanRecord(widget.unitId, text);
+                                    if (widget.isMasterScan) {
+                                      Provider.of<UnitService>(context, listen: false).setMasterCode(widget.unitId, text);
+                                    } else {
+                                      Provider.of<UnitService>(context, listen: false).addScanRecord(widget.unitId, text);
+                                    }
                                     setState(() => _scanSuccess = false);
                                     Navigator.pop(context);
                                   }
                                   _isProcessing = false;
                                 },
                               ),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final size = 260.0;
-                          final rect = Rect.fromCenter(
-                            center: Offset(constraints.maxWidth / 2, constraints.maxHeight / 2),
-                            width: size,
-                            height: size,
-                          );
-                          return CustomPaint(
-                            painter: _ScannerOverlayPainter(
-                              hole: RRect.fromRectAndRadius(rect, const Radius.circular(16)),
-                              borderColor: _invalidFeedback
-                                  ? Colors.redAccent
-                                  : (_scanSuccess ? Colors.greenAccent : Colors.white),
+                      // 扫描框和遮罩 - 加入 IgnorePointer 允许手势穿透到底层 CameraScanner
+                      IgnorePointer(
+                        child: Stack(
+                          children: [
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final size = 260.0;
+                                final rect = Rect.fromCenter(
+                                  center: Offset(
+                                    constraints.maxWidth / 2,
+                                    constraints.maxHeight / 2,
+                                  ),
+                                  width: size,
+                                  height: size,
+                                );
+                                return SizedBox.expand(
+                                  child: CustomPaint(
+                                    painter: _ScannerOverlayPainter(
+                                      hole: RRect.fromRectAndRadius(rect, const Radius.circular(16)),
+                                      borderColor: _invalidFeedback
+                                          ? Colors.redAccent
+                                          : (_scanSuccess ? Colors.greenAccent : Colors.white),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
-                      ),
-                      Center(
-                        child: Container(
-                          width: 260,
-                          height: 260,
-                          alignment: Alignment.center,
-                          child: const Text(
-                            '将二维码置于白色框内',
-                            style: TextStyle(color: Colors.white70),
-                          ),
+                            Center(
+                              child: Container(
+                                width: 260,
+                                height: 260,
+                                alignment: Alignment.center,
+                                child: const Text(
+                                  '将二维码置于白色框内',
+                                  style: TextStyle(color: Colors.white70),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

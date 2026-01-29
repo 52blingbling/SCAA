@@ -25,6 +25,10 @@ import com.google.zxing.Result;
 import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.RGBLuminanceSource;
 import com.google.zxing.PlanarYUVLuminanceSource;
+import com.google.zxing.DecodeHintType;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Arrays;
 
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
@@ -33,6 +37,12 @@ import io.flutter.plugin.common.MethodChannel;
 public class MainActivity extends FlutterActivity {
 	private static final String CHANNEL = "scan_assistant/native";
 	private static final String TAG = "ScanAssistant";
+	private static final Map<DecodeHintType, Object> DECODE_HINTS = new EnumMap<>(DecodeHintType.class);
+
+	static {
+		DECODE_HINTS.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
+		DECODE_HINTS.put(DecodeHintType.POSSIBLE_FORMATS, Arrays.asList(com.google.zxing.BarcodeFormat.QR_CODE));
+	}
 
 	@Override
 	public void configureFlutterEngine(FlutterEngine flutterEngine) {
@@ -83,7 +93,7 @@ public class MainActivity extends FlutterActivity {
 			if (yuvBytes == null || width <= 0 || height <= 0) return null;
 			PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(yuvBytes, width, height, 0, 0, width, height, false);
 			BinaryBitmap binaryBitmap = new BinaryBitmap(new HybridBinarizer(source));
-			Result result = new MultiFormatReader().decode(binaryBitmap);
+			Result result = new MultiFormatReader().decode(binaryBitmap, DECODE_HINTS);
 			return result == null ? null : result.getText();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -215,7 +225,7 @@ public class MainActivity extends FlutterActivity {
 
 			LuminanceSource source = new RGBLuminanceSource(width, height, pixels);
 			BinaryBitmap binaryBitmap = new BinaryBitmap(new HybridBinarizer(source));
-			Result result = new MultiFormatReader().decode(binaryBitmap);
+			Result result = new MultiFormatReader().decode(binaryBitmap, DECODE_HINTS);
 			return result == null ? null : result.getText();
 		} catch (Exception e) {
 			e.printStackTrace();

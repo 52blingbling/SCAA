@@ -198,6 +198,21 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
         children: [
           GestureDetector(
             behavior: HitTestBehavior.opaque,
+            onDoubleTap: () async {
+              final newZoom = _currentZoom > 1.0 ? 1.0 : 2.0;
+              setState(() => _currentZoom = newZoom);
+              try {
+                if (_controller != null) {
+                  await _controller!.setZoomLevel(newZoom);
+                } else {
+                  await _native.invokeMethod('setZoom', {'scale': newZoom});
+                }
+              } catch (e) {
+                try {
+                  await _native.invokeMethod('setZoom', {'scale': newZoom});
+                } catch (_) {}
+              }
+            },
             onTapDown: (details) async {
               final dx = details.localPosition.dx / constraints.maxWidth;
               final dy = details.localPosition.dy / constraints.maxHeight;
@@ -245,7 +260,7 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
             },
             onScaleStart: (details) => _baseZoom = _currentZoom,
             onScaleUpdate: (details) async {
-              final scale = (_baseZoom * details.scale).clamp(0.5, 6.0);
+              final scale = (_baseZoom * details.scale).clamp(1.0, 6.0);
               try {
                 if (_controller != null) {
                   await _controller!.setZoomLevel(scale);
@@ -272,45 +287,6 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
                 ),
               ),
             ),
-          // Zoom Slider overlay
-          Positioned(
-            right: 16,
-            bottom: 40,
-            top: 40,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.add, color: Colors.white),
-                Expanded(
-                  child: RotatedBox(
-                    quarterTurns: 3,
-                    child: SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        trackHeight: 2,
-                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-                      ),
-                      child: Slider(
-                        value: _currentZoom,
-                        min: 1.0,
-                        max: 6.0,
-                        onChanged: (value) async {
-                          setState(() => _currentZoom = value);
-                          try {
-                            await _controller!.setZoomLevel(value);
-                          } catch (e) {
-                            try {
-                              await _native.invokeMethod('setZoom', {'scale': value});
-                            } catch (_) {}
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                const Icon(Icons.remove, color: Colors.white),
-              ],
-            ),
-          ),
         ],
       );
     });

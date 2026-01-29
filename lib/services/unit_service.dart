@@ -110,6 +110,15 @@ class UnitService extends ChangeNotifier {
     }
   }
 
+  // 设置主控码
+  Future<void> setMasterCode(String unitId, String code) async {
+    final unitIndex = _units.indexWhere((unit) => unit.id == unitId);
+    if (unitIndex != -1) {
+      _units[unitIndex] = _units[unitIndex].copyWith(masterCode: code);
+      await saveUnits();
+    }
+  }
+
   // 删除扫描记录
   Future<void> deleteScanRecord(String unitId, String recordId) async {
     final unitIndex = _units.indexWhere((unit) => unit.id == unitId);

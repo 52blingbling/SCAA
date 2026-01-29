@@ -135,43 +135,48 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
                     },
                   );
                 }),
-                // 扫描框
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final size = 260.0;
-                    final rect = Rect.fromCenter(
-                      center: Offset(
-                        constraints.maxWidth / 2,
-                        constraints.maxHeight / 2,
+                // 扫描框和提示文字 - 加入 IgnorePointer 允许手势穿透到底层 CameraScanner
+                IgnorePointer(
+                  child: Stack(
+                    children: [
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final size = 260.0;
+                          final rect = Rect.fromCenter(
+                            center: Offset(
+                              constraints.maxWidth / 2,
+                              constraints.maxHeight / 2,
+                            ),
+                            width: size,
+                            height: size,
+                          );
+                          return SizedBox.expand(
+                            child: CustomPaint(
+                              painter: _ScannerOverlayPainter(
+                                hole: RRect.fromRectAndRadius(
+                                  rect,
+                                  const Radius.circular(16),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                      width: size,
-                      height: size,
-                    );
-                    return SizedBox.expand(
-                      child: CustomPaint(
-                        painter: _ScannerOverlayPainter(
-                          hole: RRect.fromRectAndRadius(
-                            rect,
-                            const Radius.circular(16),
+                      Center(
+                        child: Container(
+                          width: 260,
+                          height: 260,
+                          alignment: Alignment.center,
+                          child: const Text(
+                            '将二维码置于框内',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                       ),
-                    );
-                  },
-                ),
-                // 中心提示文字
-                Center(
-                  child: Container(
-                    width: 260,
-                    height: 260,
-                    alignment: Alignment.center,
-                    child: const Text(
-                      '将二维码置于框内',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                    ),
+                    ],
                   ),
                 ),
                 // 错误提示

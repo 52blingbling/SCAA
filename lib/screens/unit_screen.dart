@@ -75,9 +75,76 @@ class _UnitScreenState extends State<UnitScreen> {
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100), // Bottom padding for floating bar
-                      itemCount: unit.scanRecords.length,
+                      itemCount: unit.scanRecords.length + 1, // +1 for the Master Code header
                       itemBuilder: (context, index) {
-                        final record = unit.scanRecords[index];
+                        // Index 0 is now the Master Code section
+                        if (index == 0) {
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0F7FF),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFF007AFF).withOpacity(0.2)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF007AFF), size: 20),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      '主控单元',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF007AFF),
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    if (unit.masterCode == null)
+                                      TextButton.icon(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => ScannerScreen(unitId: widget.unitId, isMasterScan: true),
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(Icons.qr_code_scanner, size: 16),
+                                        label: const Text('录入主控'),
+                                        style: TextButton.styleFrom(
+                                          padding: EdgeInsets.zero,
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                      )
+                                    else
+                                      _CopyButton(content: unit.masterCode!),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                unit.masterCode == null
+                                    ? const Text(
+                                        '暂无主控记录',
+                                        style: TextStyle(color: Colors.grey, fontSize: 13),
+                                      )
+                                    : SelectableText(
+                                        '主控: ${unit.masterCode}',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.blackDE,
+                                        ),
+                                      ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        // Adjust index for scanRecords
+                        final record = unit.scanRecords[index - 1];
                         return Dismissible(
                           key: Key(record.id),
                           direction: DismissDirection.endToStart,
@@ -256,31 +323,43 @@ class _CopyButtonState extends State<_CopyButton> {
         ),
       );
 
-      Future.delayed(const Duration(seconds: 2), () {
+      /* Removed automatic reset of copied state as requested */
+      /* Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           setState(() {
             _copied = false;
           });
         }
-      });
+      }); */
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
-      transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
-      child: IconButton(
-        key: ValueKey(_copied),
-        onPressed: _handleCopy,
-        icon: Icon(
-          _copied ? Icons.check_circle_rounded : Icons.copy_rounded,
-          color: _copied ? Colors.green : const Color(0xFF007AFF),
-          size: 20,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_copied)
+          const Padding(
+            padding: EdgeInsets.only(right: 8.0),
+            child: Icon(
+              Icons.check_circle_rounded,
+              color: Colors.green,
+              size: 20,
+            ),
+          ),
+        IconButton(
+          onPressed: _handleCopy,
+          icon: Icon(
+            Icons.copy_rounded,
+            color: const Color(0xFF007AFF),
+            size: 20,
+          ),
+          tooltip: '复制内容',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
         ),
-        tooltip: _copied ? '已复制' : '复制内容',
-      ),
+      ],
     );
   }
 }

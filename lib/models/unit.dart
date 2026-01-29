@@ -3,12 +3,14 @@ class Unit {
   final String id;
   final String name;
   final DateTime createdAt;
+  final String? masterCode;
   final List<ScanRecord> scanRecords;
 
   Unit({
     required this.id,
     required this.name,
     required this.createdAt,
+    this.masterCode,
     List<ScanRecord>? scanRecords,
   }) : scanRecords = scanRecords ?? [];
 
@@ -17,12 +19,14 @@ class Unit {
     String? id,
     String? name,
     DateTime? createdAt,
+    String? masterCode,
     List<ScanRecord>? scanRecords,
   }) {
     return Unit(
       id: id ?? this.id,
       name: name ?? this.name,
       createdAt: createdAt ?? this.createdAt,
+      masterCode: masterCode ?? this.masterCode,
       scanRecords: scanRecords ?? this.scanRecords,
     );
   }
@@ -33,6 +37,7 @@ class Unit {
       'id': id,
       'name': name,
       'createdAt': createdAt.toIso8601String(),
+      'masterCode': masterCode,
       'scanRecords': scanRecords.map((record) => record.toMap()).toList(),
     };
   }
@@ -43,6 +48,7 @@ class Unit {
       id: map['id'],
       name: map['name'],
       createdAt: DateTime.parse(map['createdAt']),
+      masterCode: map['masterCode'],
       scanRecords: (map['scanRecords'] as List)
           .map((record) => ScanRecord.fromMap(record))
           .toList(),
