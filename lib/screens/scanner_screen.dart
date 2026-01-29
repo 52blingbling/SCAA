@@ -30,16 +30,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
   void initState() {
     super.initState();
     _requestCameraPermission();
-    _initFocusMode();
-  }
-
-  Future<void> _initFocusMode() async {
-    try {
-      final channel = MethodChannel('scan_assistant/native');
-      await channel.invokeMethod('setFocusMode');
-    } catch (e) {
-      print('Failed to set focus mode: $e');
-    }
   }
 
   @override
@@ -164,50 +154,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
     );
   }
 
-  void _onDetect(BarcodeCapture capture) async {
-    if (!_permissionGranted) return;
-    if (_isProcessing) return;
-    final barcodes = capture.barcodes;
-    if (barcodes.isEmpty) return;
-    final first = barcodes.first;
-    final code = first.rawValue ?? first.displayValue;
-    if (code == null || code.isEmpty) return;
-    final text = code.trim();
-    if (text.length > 16 || !RegExp(r'^[A-Za-z0-9]+$').hasMatch(text)) {
-      setState(() {
-        _invalidFeedback = true;
-      });
-      // AudioService.playScanSound(); // Removed sound for invalid codes
-      HapticFeedback.mediumImpact();
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) {
-        setState(() {
-          _invalidFeedback = false;
-        });
-      }
-      return;
-    }
-    _isProcessing = true;
-    setState(() {
-      _resultCode = text;
-      _scanSuccess = true;
-    });
-    AudioService.playScanSound();
-    HapticFeedback.lightImpact();
-    await _controller?.stop();
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (mounted) {
-      Provider.of<UnitService>(context, listen: false)
-          .addScanRecord(widget.unitId, text);
-      setState(() => _scanSuccess = false);
-      Navigator.pop(context);
-    }
-    _isProcessing = false;
-  }
-
   @override
   void dispose() {
-    _controller?.dispose();
     super.dispose();
   }
 }

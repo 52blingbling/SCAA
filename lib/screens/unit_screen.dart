@@ -149,26 +149,7 @@ class _UnitScreenState extends State<UnitScreen> {
                                           ),
                                         ),
                                       ),
-                                      IconButton(
-                                        onPressed: () async {
-                                          await Clipboard.setData(ClipboardData(text: record.content));
-                                          // Show a snackbar to indicate successful copy
-                                          if (mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text('复制成功'),
-                                                duration: Duration(milliseconds: 1000),
-                                              ),
-                                            );
-                                          }
-                                        },
-                                        icon: const Icon(
-                                          Icons.copy_rounded,
-                                          color: Color(0xFF007AFF),
-                                          size: 20,
-                                        ),
-                                        tooltip: '复制内容',
-                                      ),
+                                      _CopyButton(content: record.content),
                                     ],
                                   ),
                                   Padding(
@@ -237,5 +218,69 @@ class _UnitScreenState extends State<UnitScreen> {
   @override
   void dispose() {
     super.dispose();
+  }
+}
+
+class _CopyButton extends StatefulWidget {
+  final String content;
+  const _CopyButton({Key? key, required this.content}) : super(key: key);
+
+  @override
+  State<_CopyButton> createState() => _CopyButtonState();
+}
+
+class _CopyButtonState extends State<_CopyButton> {
+  bool _copied = false;
+
+  void _handleCopy() async {
+    await Clipboard.setData(ClipboardData(text: widget.content));
+    if (mounted) {
+      setState(() {
+        _copied = true;
+      });
+      
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.check_circle, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Text('已复制到剪贴板'),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          duration: const Duration(milliseconds: 1500),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _copied = false;
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+      child: IconButton(
+        key: ValueKey(_copied),
+        onPressed: _handleCopy,
+        icon: Icon(
+          _copied ? Icons.check_circle_rounded : Icons.copy_rounded,
+          color: _copied ? Colors.green : const Color(0xFF007AFF),
+          size: 20,
+        ),
+        tooltip: _copied ? '已复制' : '复制内容',
+      ),
+    );
   }
 }

@@ -47,6 +47,14 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
       if (cam == null) return;
       _controller = CameraController(cam, ResolutionPreset.high, enableAudio: false, imageFormatGroup: ImageFormatGroup.yuv420);
       await _controller!.initialize();
+      // Try to set continuous focus mode if supported
+      try {
+        if (_controller!.value.focusModeCapabilities.contains(FocusMode.continuous)) {
+          await _controller!.setFocusMode(FocusMode.continuous);
+        }
+      } catch (e) {
+        debugPrint('Focus mode error: $e');
+      }
       // start image stream for real-time decoding
       try {
         await _controller!.startImageStream(_handleCameraImage);
@@ -179,59 +187,133 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
     }
   }
 
+  Offset? _focusPoint;
+  bool _showFocusCircle = false;
+
   @override
   Widget build(BuildContext context) {
     if (_controller == null || !_controller!.value.isInitialized) {
       return const Center(child: CircularProgressIndicator());
     }
     return LayoutBuilder(builder: (context, constraints) {
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (details) async {
-          final dx = details.localPosition.dx / constraints.maxWidth;
-          final dy = details.localPosition.dy / constraints.maxHeight;
-          // 尝试使用 camera 插件的对焦 API；若不可用则回退到原生 MethodChannel
-          try {
-            await _controller!.setFocusPoint(Offset(dx, dy));
-            HapticFeedback.selectionClick();
-          } catch (e) {
-            try {
-              await _native.invokeMethod('focusAt', {'x': dx, 'y': dy});
-              HapticFeedback.selectionClick();
-            } catch (e2) {
-              // 最终忽略错误
-            }
-          }
-        },
-        onVerticalDragUpdate: (details) async {
-          final delta = -details.delta.dy / constraints.maxHeight; // normalized
-          // 先尝试 camera 插件的 setExposureOffset（如果支持）；失败则回退到原生
-          try {
-            // 使用类字段跟踪当前曝光偏移
-            final newOffset = (_currentExposure + delta).clamp(-2.0, 2.0);
-            await _controller!.setExposureOffset(newOffset);
-            _currentExposure = newOffset;
-          } catch (e) {
-            try {
-              await _native.invokeMethod('setExposure', {'delta': delta});
-            } catch (_) {}
-          }
-        },
-        onScaleStart: (details) => _baseZoom = _currentZoom,
-        onScaleUpdate: (details) async {
-          final scale = (_baseZoom * details.scale).clamp(0.5, 6.0);
-          try {
-            if (_controller != null) {
-              await _controller!.setZoomLevel(scale);
-              _currentZoom = scale;
-            } else {
-              await _native.invokeMethod('setZoom', {'scale': scale});
-            }
-          } catch (e) {
-            try { await _native.invokeMethod('setZoom', {'scale': scale}); } catch(_){}
-          }
-        },
-        child: CameraPreview(_controller!),
+      return Stack(
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (details) async {
+              final dx = details.localPosition.dx / constraints.maxWidth;
+              final dy = details.localPosition.dy / constraints.maxHeight;
+              
+              setState(() {
+                _focusPoint = details.localPosition;
+                _showFocusCircle = true;
+              });
+
+              // 尝试使用 camera 插件的对焦 API；若不可用则回退到原生 MethodChannel
+              try {
+                await _controller!.setFocusPoint(Offset(dx, dy));
+                HapticFeedback.selectionClick();
+              } catch (e) {
+                try {
+                  await _native.invokeMethod('focusAt', {'x': dx, 'y': dy});
+                  HapticFeedback.selectionClick();
+                } catch (e2) {
+                  // 最终忽略错误
+                }
+              }
+
+              // Hide focus circle after a delay
+              Future.delayed(const Duration(milliseconds: 500), () {
+                if (mounted) {
+                  setState(() {
+                    _showFocusCircle = false;
+                  });
+                }
+              });
+            },
+            onVerticalDragUpdate: (details) async {
+              final delta = -details.delta.dy / constraints.maxHeight; // normalized
+              // 先尝试 camera 插件的 setExposureOffset（如果支持）；失败则回退到原生
+              try {
+                // 使用类字段跟踪当前曝光偏移
+                final newOffset = (_currentExposure + delta).clamp(-2.0, 2.0);
+                await _controller!.setExposureOffset(newOffset);
+                _currentExposure = newOffset;
+              } catch (e) {
+                try {
+                  await _native.invokeMethod('setExposure', {'delta': delta});
+                } catch (_) {}
+              }
+            },
+            onScaleStart: (details) => _baseZoom = _currentZoom,
+            onScaleUpdate: (details) async {
+              final scale = (_baseZoom * details.scale).clamp(0.5, 6.0);
+              try {
+                if (_controller != null) {
+                  await _controller!.setZoomLevel(scale);
+                  _currentZoom = scale;
+                } else {
+                  await _native.invokeMethod('setZoom', {'scale': scale});
+                }
+              } catch (e) {
+                try { await _native.invokeMethod('setZoom', {'scale': scale}); } catch(_){}
+              }
+            },
+            child: CameraPreview(_controller!),
+          ),
+          if (_showFocusCircle && _focusPoint != null)
+            Positioned(
+              left: _focusPoint!.dx - 30,
+              top: _focusPoint!.dy - 30,
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white, width: 2),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          // Zoom Slider overlay
+          Positioned(
+            right: 16,
+            bottom: 40,
+            top: 40,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.add, color: Colors.white),
+                Expanded(
+                  child: RotatedBox(
+                    quarterTurns: 3,
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 2,
+                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                      ),
+                      child: Slider(
+                        value: _currentZoom,
+                        min: 1.0,
+                        max: 6.0,
+                        onChanged: (value) async {
+                          setState(() => _currentZoom = value);
+                          try {
+                            await _controller!.setZoomLevel(value);
+                          } catch (e) {
+                            try {
+                              await _native.invokeMethod('setZoom', {'scale': value});
+                            } catch (_) {}
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                const Icon(Icons.remove, color: Colors.white),
+              ],
+            ),
+          ),
+        ],
       );
     });
   }
