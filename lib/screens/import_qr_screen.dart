@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
+import 'package:provider/provider.dart';
 import '../widgets/camera_scanner.dart';
-// image-from-gallery decoding removed to avoid native-decode dependency
 import '../services/qr_service.dart';
+import '../services/unit_service.dart';
 import '../models/unit.dart';
 
 class ImportQRScreen extends StatefulWidget {
@@ -20,8 +20,6 @@ class ImportQRScreen extends StatefulWidget {
 }
 
 class _ImportQRScreenState extends State<ImportQRScreen> {
-  // 使用 CameraScanner；移除 MobileScannerController 以避免冲突
-  final MethodChannel _nativeChannel = const MethodChannel('scan_assistant/native');
   bool _permissionGranted = false;
   bool _isProcessing = false;
   String? _errorMessage;
@@ -33,14 +31,75 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
   }
 
   Future<void> _requestCameraPermission() async {
-    final status = await _checkCameraPermission();
+    // 简化权限逻辑，实际权限在 CameraScanner 内部处理
     setState(() {
-      _permissionGranted = status;
+      _permissionGranted = true;
     });
   }
 
-  Future<bool> _checkCameraPermission() async {
-    return true;
+  void _handleQRData(String text) async {
+    final unitService = Provider.of<UnitService>(context, listen: false);
+    
+    // 尝试解析为单元分享码（包含主控码和记录列表）
+    final importedUnit = QRService.decodeUnit(text);
+    
+    if (importedUnit != null) {
+      await unitService.addUnitFromImport(importedUnit);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('成功导入单元: ${importedUnit.name}'), backgroundColor: Colors.green),
+        );
+        Navigator.pop(context);
+        widget.onUnitImported(importedUnit);
+      }
+    } else {
+      // 如果解析失败，说明扫到的可能是一个普通的设备码，而不是分享码
+      // 提供“快速创建”功能
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('识别为设备编码'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('该二维码不是标准的“单元分享码”，看起来是一个设备编码：'),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100], 
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!)
+                  ),
+                  child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blue)),
+                ),
+                const SizedBox(height: 12),
+                const Text('是否以此编码创建一个新单元？'),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  final unitName = '新设备单元_${DateTime.now().hour}${DateTime.now().minute}';
+                  await unitService.addUnit(unitName);
+                  final units = unitService.units;
+                  if (units.isNotEmpty) {
+                    await unitService.addScanRecord(units.last.id, text);
+                  }
+                  if (mounted) Navigator.pop(context);
+                },
+                child: const Text('立即创建'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _pickImageFromGallery() async {
@@ -57,7 +116,7 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
         return;
       }
 
-      final channel = MethodChannel('scan_assistant/native');
+      final channel = const MethodChannel('scan_assistant/native');
       final String? decoded = await channel.invokeMethod('decodeImage', {'path': pickedFile.path});
 
       if (decoded != null && decoded.isNotEmpty) {
@@ -65,28 +124,16 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
       } else {
         setState(() {
           _errorMessage = '未能识别图片中的二维码，请选择清晰的图片';
-          _isProcessing = false;
         });
       }
     } catch (e) {
       setState(() {
         _errorMessage = '读取图片失败: $e';
-        _isProcessing = false;
       });
-    }
-  }
-
-          _errorMessage = '无效的二维码格式';
-          _isProcessing = false;
-        });
-        HapticFeedback.vibrate();
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
       }
-    } catch (e) {
-      setState(() {
-        _errorMessage = '解析失败: $e';
-        _isProcessing = false;
-      });
-      HapticFeedback.vibrate();
     }
   }
 
@@ -108,19 +155,17 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
           ? Stack(
               fit: StackFit.expand,
               children: [
-                LayoutBuilder(builder: (context, constraints) {
-                  return CameraScanner(
-                    onDetect: (text) async {
-                      if (_isProcessing) return;
-                      setState(() { _isProcessing = true; });
-                      try {
-                        _handleQRData(text);
-                      } finally {
-                        if (mounted) setState(() { _isProcessing = false; });
-                      }
-                    },
-                  );
-                }),
+                CameraScanner(
+                  onDetect: (text) async {
+                    if (_isProcessing) return;
+                    setState(() { _isProcessing = true; });
+                    try {
+                      _handleQRData(text);
+                    } finally {
+                      if (mounted) setState(() { _isProcessing = false; });
+                    }
+                  },
+                ),
                 // 扫描框和提示文字 - 加入 IgnorePointer 允许手势穿透到底层 CameraScanner
                 IgnorePointer(
                   child: Stack(
@@ -168,12 +213,15 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
                 // 错误提示
                 if (_errorMessage != null)
                   Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
+                    top: 100,
+                    left: 20,
+                    right: 20,
                     child: Container(
                       padding: const EdgeInsets.all(16),
-                      color: Colors.redAccent.withOpacity(0.9),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Row(
                         children: [
                           Expanded(
@@ -200,24 +248,7 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
                   ),
               ],
             )
-          : Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.camera_alt, size: 60, color: Colors.grey),
-                  const SizedBox(height: 20),
-                  const Text(
-                    '需要相机权限才能扫描二维码',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _requestCameraPermission,
-                    child: const Text('重新请求权限'),
-                  ),
-                ],
-              ),
-            ),
+          : const Center(child: CircularProgressIndicator()),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _isProcessing ? null : _pickImageFromGallery,
@@ -258,7 +289,7 @@ class _ScannerOverlayPainter extends CustomPainter {
 
   @override
   void paint(ui.Canvas canvas, ui.Size size) {
-    final overlayPaint = Paint()..color = const Color(0x88000000);
+    final overlayPaint = Paint()..color = const Color(0xAA000000);
     final cutout = Path()
       ..fillType = PathFillType.evenOdd
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
