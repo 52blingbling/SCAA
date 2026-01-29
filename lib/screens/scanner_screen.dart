@@ -117,22 +117,22 @@ class _ScannerScreenState extends State<ScannerScreen> {
                             style: TextStyle(color: Colors.white70),
                           ),
                         ),
-                      )
+                      ),
                     ],
-                  ),
-                );
-              }),
+                  );
+                },
+              ),
             ),
-                Expanded(
-                  flex: 1,
-                  child: Center(
-                    child: (_resultCode != null)
-                        ? Text('扫描结果: ${_resultCode!}')
-                        : const Text('请将二维码对准扫描框'),
-                  ),
-                ),
-              ],
-            )
+            Expanded(
+              flex: 1,
+              child: Center(
+                child: (_resultCode != null)
+                    ? Text('扫描结果: ${_resultCode!}')
+                    : const Text('请将二维码对准扫描框'),
+              ),
+            ),
+          ],
+        )
           : Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
