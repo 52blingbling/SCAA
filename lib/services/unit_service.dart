@@ -144,6 +144,7 @@ class UnitService extends ChangeNotifier {
       name: importedUnit.name,
       createdAt: DateTime.now(),
       scanRecords: importedUnit.scanRecords,
+      masterCode: importedUnit.masterCode,
     );
     _units.add(newUnit);
     await saveUnits();

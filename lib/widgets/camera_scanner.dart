@@ -273,15 +273,21 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
               }
             },
             child: ClipRect(
-              child: OverflowBox(
-                alignment: Alignment.center,
+              child: Center(
                 child: FittedBox(
                   fit: BoxFit.cover,
-                  child: SizedBox(
-                    width: constraints.maxWidth,
-                    height: constraints.maxWidth / _controller!.value.aspectRatio,
-                    child: CameraPreview(_controller!),
-                  ),
+                  child: Builder(builder: (context) {
+                    var ratio = _controller!.value.aspectRatio;
+                    // For portrait apps, we want the taller ratio.
+                    // If ratio > 1 (e.g. 1.33), it means it's returning landscape.
+                    // We invert it to get the portrait aspect ratio (0.75).
+                    if (ratio > 1) ratio = 1 / ratio;
+                    return SizedBox(
+                      width: constraints.maxWidth,
+                      height: constraints.maxWidth / ratio,
+                      child: CameraPreview(_controller!),
+                    );
+                  }),
                 ),
               ),
             ),
