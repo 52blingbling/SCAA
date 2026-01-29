@@ -76,24 +76,6 @@ class _ImportQRScreenState extends State<ImportQRScreen> {
     }
   }
 
-  void _handleQRData(String qrData) {
-    try {
-      final unit = QRService.decodeUnit(qrData);
-      
-      if (unit != null) {
-        if (mounted) {
-          Navigator.pop(context);
-          widget.onUnitImported(unit);
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('成功导入单元: ${unit.name}（${unit.scanRecords.length}条记录）'),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      } else {
-        setState(() {
           _errorMessage = '无效的二维码格式';
           _isProcessing = false;
         });
