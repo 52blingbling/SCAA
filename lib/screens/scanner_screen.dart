@@ -18,7 +18,7 @@ class ScannerScreen extends StatefulWidget {
 }
 
 class _ScannerScreenState extends State<ScannerScreen> {
-  // 使用自定义 CameraScanner，移除 MobileScannerController 以避免冲突
+  // 使用自定义 CameraScanner
   final MethodChannel _nativeChannel = const MethodChannel('scan_assistant/native');
   String? _resultCode;
   bool _permissionGranted = false;
