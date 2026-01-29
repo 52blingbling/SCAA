@@ -23,7 +23,6 @@ import com.google.zxing.LuminanceSource;
 import com.google.zxing.MultiFormatReader;
 import com.google.zxing.Result;
 import com.google.zxing.common.HybridBinarizer;
-import com.google.zxing.common.GlobalHistogramBinarizer;
 import com.google.zxing.RGBLuminanceSource;
 import com.google.zxing.PlanarYUVLuminanceSource;
 import com.google.zxing.DecodeHintType;
@@ -45,8 +44,7 @@ public class MainActivity extends FlutterActivity {
 		DECODE_HINTS.put(DecodeHintType.POSSIBLE_FORMATS, Arrays.asList(
 			com.google.zxing.BarcodeFormat.QR_CODE,
 			com.google.zxing.BarcodeFormat.DATA_MATRIX,
-			com.google.zxing.BarcodeFormat.CODE_128,
-			com.google.zxing.BarcodeFormat.EAN_13
+			com.google.zxing.BarcodeFormat.CODE_128
 		));
 	}
 
@@ -93,44 +91,13 @@ public class MainActivity extends FlutterActivity {
 			});
 	}
 
-	/**
-	 * 高级解码：包含常规识别、反色识别和多算法尝试
-	 */
-	private String decodeWithRetry(LuminanceSource source) {
-		MultiFormatReader reader = new MultiFormatReader();
-		
-		// 1. 尝试常规解码 (HybridBinarizer - 对光照不均效果好)
-		try {
-			Result result = reader.decode(new BinaryBitmap(new HybridBinarizer(source)), DECODE_HINTS);
-			if (result != null) return result.getText();
-		} catch (Exception ignored) {}
-
-		// 2. 尝试反色解码 (针对黑色背景、颜色反转的二维码/OLED屏)
-		try {
-			Result result = reader.decode(new BinaryBitmap(new HybridBinarizer(source.invert())), DECODE_HINTS);
-			if (result != null) return result.getText();
-		} catch (Exception ignored) {}
-
-		// 3. 尝试全局直方图解码 (针对低对比度屏幕效果好)
-		try {
-			Result result = reader.decode(new BinaryBitmap(new GlobalHistogramBinarizer(source)), DECODE_HINTS);
-			if (result != null) return result.getText();
-		} catch (Exception ignored) {}
-
-		// 4. 尝试反色的全局直方图解码
-		try {
-			Result result = reader.decode(new BinaryBitmap(new GlobalHistogramBinarizer(source.invert())), DECODE_HINTS);
-			if (result != null) return result.getText();
-		} catch (Exception ignored) {}
-
-		return null;
-	}
-
 	private String decodeImageBytes(byte[] yuvBytes, int width, int height) {
 		try {
 			if (yuvBytes == null || width <= 0 || height <= 0) return null;
 			PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(yuvBytes, width, height, 0, 0, width, height, false);
-			return decodeWithRetry(source);
+			BinaryBitmap binaryBitmap = new BinaryBitmap(new HybridBinarizer(source));
+			Result result = new MultiFormatReader().decode(binaryBitmap, DECODE_HINTS);
+			return result == null ? null : result.getText();
 		} catch (Exception e) {
 			return null;
 		}
@@ -145,7 +112,9 @@ public class MainActivity extends FlutterActivity {
 			int[] pixels = new int[width * height];
 			bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
 			RGBLuminanceSource source = new RGBLuminanceSource(width, height, pixels);
-			return decodeWithRetry(source);
+			BinaryBitmap binaryBitmap = new BinaryBitmap(new HybridBinarizer(source));
+			Result result = new MultiFormatReader().decode(binaryBitmap, DECODE_HINTS);
+			return result == null ? null : result.getText();
 		} catch (Exception e) {
 			return null;
 		}
