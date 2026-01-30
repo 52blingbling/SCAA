@@ -36,8 +36,8 @@ import io.flutter.plugin.common.MethodChannel;
 
 public class MainActivity extends FlutterActivity {
 	private static final String CHANNEL = "scan_assistant/native";
-	private static final String TAG = "ScanAssistant";
 	private static final Map<DecodeHintType, Object> DECODE_HINTS = new EnumMap<>(DecodeHintType.class);
+	private static final MultiFormatReader reader = new MultiFormatReader();
 
 	static {
 		DECODE_HINTS.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
@@ -46,6 +46,7 @@ public class MainActivity extends FlutterActivity {
 			com.google.zxing.BarcodeFormat.DATA_MATRIX,
 			com.google.zxing.BarcodeFormat.CODE_128
 		));
+		reader.setHints(DECODE_HINTS);
 	}
 
 	@Override
@@ -57,85 +58,64 @@ public class MainActivity extends FlutterActivity {
 				if (call.method.equals("saveImage")) {
 					String base64 = call.argument("bytes");
 					String name = call.argument("name");
-					boolean ok = saveImageToGallery(base64, name);
-					result.success(ok);
+					result.success(saveImageToGallery(base64, name));
 				} else if (call.method.equals("decodeImage")) {
 					String path = call.argument("path");
-					String decoded = decodeImageFile(path);
-					result.success(decoded);
-				} else if (call.method.equals("setFocusMode")) {
-					boolean ok = configureContinuousFocus();
-					result.success(ok);
-				} else if (call.method.equals("focusAt")) {
-					Double x = call.argument("x");
-					Double y = call.argument("y");
-					boolean ok = focusAtPoint(x == null ? 0.5 : x, y == null ? 0.5 : y);
-					result.success(ok);
-				} else if (call.method.equals("setExposure")) {
-					Double delta = call.argument("delta");
-					boolean ok = adjustExposure(delta == null ? 0.0 : delta);
-					result.success(ok);
-				} else if (call.method.equals("setZoom")) {
-					Double scale = call.argument("scale");
-					boolean ok = applyZoom(scale == null ? 1.0 : scale);
-					result.success(ok);
+					result.success(decodeImageFile(path));
 				} else if (call.method.equals("decodeImageBytes")) {
 					byte[] bytes = call.argument("bytes");
 					Integer w = call.argument("width");
 					Integer h = call.argument("height");
-					String decoded = decodeImageBytes(bytes, w == null ? 0 : w, h == null ? 0 : h);
-					result.success(decoded);
+					result.success(decodeImageBytes(bytes, w == null ? 0 : w, h == null ? 0 : h));
+				} else if (call.method.equals("setZoom")) {
+					Double scale = call.argument("scale");
+					result.success(applyZoom(scale == null ? 1.0 : scale));
+				} else if (call.method.equals("setExposure")) {
+					Double delta = call.argument("delta");
+					result.success(adjustExposure(delta == null ? 0.0 : delta));
 				} else {
 					result.notImplemented();
 				}
 			});
 	}
 
+	/**
+	 * 高效解码逻辑
+	 * 采用裁剪中心区域 + 双向(正反色)扫描策略
+	 */
 	private String decodeImageBytes(byte[] yuvBytes, int width, int height) {
+		if (yuvBytes == null || width <= 0 || height <= 0) return null;
+		
 		try {
-			if (yuvBytes == null || width <= 0 || height <= 0) return null;
-			
-			// 思路：将蓝色分量(U)融合到亮度分量(Y)中，增强蓝色码的对比度
-			// YUV420 格式中，U 分量在 Y 分量之后。为了性能，我们只在扫描频率较高时进行轻量处理。
-			byte[] enhancedY = new byte[width * height];
-			int ySize = width * height;
-			
-			// 只有在尝试解决蓝码识别时才执行此循环
-			for (int i = 0; i < ySize; i++) {
-				int yVal = yuvBytes[i] & 0xFF;
-				// 获取对应的 U 分量 (大致采样即可，不需要精确到像素对齐以保持性能)
-				int uIdx = ySize + (i / width / 2) * (width / 2) + (i % width / 2);
-				if (uIdx < yuvBytes.length) {
-					int uVal = (yuvBytes[uIdx] & 0xFF) - 128;
-					if (uVal > 10) { // 偏蓝区域
-						yVal = Math.min(255, yVal + uVal * 2); 
-					}
-				}
-				enhancedY[i] = (byte) yVal;
-			}
+			// 为了极致性能，我们只扫描画面中心的 70% 区域，这能过滤边缘噪点并提升速度
+			int cropW = (int)(width * 0.7);
+			int cropH = (int)(height * 0.7);
+			int left = (width - cropW) / 2;
+			int top = (height - cropH) / 2;
 
 			PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(
-				enhancedY, width, height, 0, 0, width, height, false
+				yuvBytes, width, height, left, top, cropW, cropH, false
 			);
-			
-			MultiFormatReader reader = new MultiFormatReader();
-			
-			// 第一遍：常规增强扫描
+
+			// 1. 尝试常规识别
 			try {
-				Result result = reader.decode(new BinaryBitmap(new HybridBinarizer(source)), DECODE_HINTS);
-				if (result != null) return result.getText();
+				Result result = reader.decodeWithState(new BinaryBitmap(new HybridBinarizer(source)));
+				return result.getText();
 			} catch (Exception ignored) {}
 
-			// 第二遍：反色扫描 (黑底蓝码的核心补救措施)
+			// 2. 核心补救：反色识别 (针对黑底蓝码秒出的关键)
 			try {
-				Result result = reader.decode(new BinaryBitmap(new HybridBinarizer(source.invert())), DECODE_HINTS);
-				if (result != null) return result.getText();
+				// ZXing 的 source.invert() 非常高效，只是对每个像素做了一次简单的 ~ 操作
+				Result result = reader.decodeWithState(new BinaryBitmap(new HybridBinarizer(source.invert())));
+				return result.getText();
 			} catch (Exception ignored) {}
 
-			return null;
 		} catch (Exception e) {
-			return null;
+			Log.e("Scan", "Decode error", e);
+		} finally {
+			reader.reset();
 		}
+		return null;
 	}
 
 	private String decodeImageFile(String path) {
@@ -148,45 +128,19 @@ public class MainActivity extends FlutterActivity {
 			bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
 			RGBLuminanceSource source = new RGBLuminanceSource(width, height, pixels);
 			
-			MultiFormatReader reader = new MultiFormatReader();
 			try {
-				Result result = reader.decode(new BinaryBitmap(new HybridBinarizer(source)), DECODE_HINTS);
-				if (result != null) return result.getText();
-			} catch (Exception ignored) {}
-
-			// 文件导入也支持反色重试
-			try {
-				Result result = reader.decode(new BinaryBitmap(new HybridBinarizer(source.invert())), DECODE_HINTS);
-				if (result != null) return result.getText();
-			} catch (Exception ignored) {}
-			
-			return null;
-		} catch (Exception e) {
-			return null;
-		}
-	}
-
-	private boolean configureContinuousFocus() {
-		try {
-			CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-			if (cameraManager == null) return false;
-			String[] cameraIdList = cameraManager.getCameraIdList();
-			if (cameraIdList.length == 0) return false;
-			String cameraId = selectBackCamera(cameraManager, cameraIdList);
-			if (cameraId == null) cameraId = cameraIdList[0];
-			CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
-			int[] afModes = characteristics.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES);
-			if (afModes == null || afModes.length == 0) return false;
-			boolean supportsContinuous = false;
-			for (int mode : afModes) {
-				if (mode == CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE) {
-					supportsContinuous = true;
-					break;
+				return reader.decodeWithState(new BinaryBitmap(new HybridBinarizer(source))).getText();
+			} catch (Exception e) {
+				try {
+					return reader.decodeWithState(new BinaryBitmap(new HybridBinarizer(source.invert()))).getText();
+				} catch (Exception e2) {
+					return null;
 				}
 			}
-			return supportsContinuous;
 		} catch (Exception e) {
-			return false;
+			return null;
+		} finally {
+			reader.reset();
 		}
 	}
 
@@ -197,27 +151,8 @@ public class MainActivity extends FlutterActivity {
 				Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
 				if (facing != null && facing == CameraCharacteristics.LENS_FACING_BACK) return cameraId;
 			}
-		} catch (Exception e) { }
+		} catch (Exception e) {}
 		return null;
-	}
-
-	private boolean focusAtPoint(double nx, double ny) {
-		try {
-			CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-			if (cameraManager == null) return false;
-			String[] ids = cameraManager.getCameraIdList();
-			if (ids.length == 0) return false;
-			String cameraId = selectBackCamera(cameraManager, ids);
-			if (cameraId == null) cameraId = ids[0];
-			CameraCharacteristics chars = cameraManager.getCameraCharacteristics(cameraId);
-			int[] afModes = chars.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES);
-			if (afModes == null) return false;
-			boolean hasAuto = false;
-			for (int m : afModes) if (m == CaptureRequest.CONTROL_AF_MODE_AUTO || m == CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE) hasAuto = true;
-			return hasAuto;
-		} catch (Exception e) {
-			return false;
-		}
 	}
 
 	private boolean adjustExposure(double delta) {
@@ -255,6 +190,7 @@ public class MainActivity extends FlutterActivity {
 
 	private boolean saveImageToGallery(String base64, String filename) {
 		try {
+			if (base64 == null) return false;
 			byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 				ContentValues values = new ContentValues();

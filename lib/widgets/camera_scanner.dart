@@ -24,7 +24,7 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
   List<CameraDescription>? _cameras;
   double _currentZoom = 1.0;
   double _baseZoom = 1.0;
-  double _currentExposure = -2.0;
+  double _currentExposure = -1.5;
   Timer? _captureTimer;
   bool _busy = false;
   final MethodChannel _native = const MethodChannel('scan_assistant/native');
@@ -45,7 +45,7 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
       }
       final cam = back ?? (_cameras!.isNotEmpty ? _cameras!.first : null);
       if (cam == null) return;
-      _controller = CameraController(cam, ResolutionPreset.high, enableAudio: false, imageFormatGroup: ImageFormatGroup.yuv420);
+      _controller = CameraController(cam, ResolutionPreset.medium, enableAudio: false, imageFormatGroup: ImageFormatGroup.yuv420);
       await _controller!.initialize();
       // Try to set auto focus mode if supported
       try {
@@ -55,7 +55,7 @@ class _CameraScannerState extends State<CameraScanner> with WidgetsBindingObserv
       }
       // 尝试设置较低的默认曝光度，提高二维码识别率
       try {
-        await _controller!.setExposureOffset(-2.0);
+        await _controller!.setExposureOffset(-1.5);
       } catch (e) {
         debugPrint('Set exposure error: $e');
       }
